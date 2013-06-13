@@ -1,8 +1,10 @@
 require 'Qt.rb'
 
 class Card < Qt::GraphicsItem
+  attr_reader :width, :height
   def initialize rank, suit, width, height, gameboard
     super nil
+    @held = true    
     @state = :down
     @rank = rank
     @suit = suit
@@ -27,6 +29,15 @@ class Card < Qt::GraphicsItem
     # painter.drawPath path
     # #painter.drawRect 0,0,@width-1,@height-1
     # painter.end
+  end
+  def held?
+    @held
+  end
+  def hold!
+    @held = true
+  end
+  def unhold!
+    @held = false
   end
   def setMovable move
     setFlag Qt::GraphicsItem::ItemIsMovable, move
@@ -68,6 +79,10 @@ class Card < Qt::GraphicsItem
     @state = :down
   end
   def mousePressEvent event
-   puts "card press"
+    # puts "#{@rank.to_s} #{@suit.to_s}"
+    # puts "#{pos().x } #{pos().y} "
+    # puts "#{scenePos().x} #{scenePos().y}"
+    # puts "----"
+    event.ignore # pass to parent
   end
 end
