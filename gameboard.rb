@@ -7,6 +7,19 @@ class MyView < Qt::GraphicsView
   end  
 end
 
+class Hand
+  def initialize
+    
+  end
+end
+
+class CardInHand
+  attr_accessor :card
+  def initialize card
+    @card = card
+  end
+end
+
 class Gameboard < Qt::Object
   attr_accessor :view
   def initialize
@@ -16,13 +29,13 @@ class Gameboard < Qt::Object
     @view =Qt::GraphicsView.new @scene    
     @view.backgroundBrush = @background_color
     @view.resize 800,600
-    @view.setWindowTitle "Spider Solitaire"
+    @view.setWindowTitle "PokerGEMZ"
   
     @border = 15
     @top_space = 50
     @card_spacer = 10
     @overlap = 30
-    #there's 10 columns
+    
     @card_width = (@view.width()-(2*@border))/10 - @card_spacer
     @deck = Deck.new @card_width,100, self
     @columns = []
@@ -33,27 +46,27 @@ class Gameboard < Qt::Object
     
   end
   def add_deck_to_scene
-    col = 0
-    for i in 0...54
-      card = @deck.deal_card
-      @columns[col] << card
-      @scene.addItem card
-      col += 1
-      col %= 10
-    end
-    for i in 0...10
-       y = @top_space
-       x = i*(@card_width+@card_spacer)+@border
-       y = @top_space
-       @columns[i].each do |card|
-         card.setPos x,y
-         y += @overlap
-       end
-    end
-    @columns.each do |col| 
-      col.last.face_up!
-      col.last.setMovable true
-    end
+    # col = 0
+    # for i in 0...54
+      # card = @deck.deal_card
+      # @columns[col] << card
+      # @scene.addItem card
+      # col += 1
+      # col %= 10
+    # end
+    # for i in 0...10
+       # y = @top_space
+       # x = i*(@card_width+@card_spacer)+@border
+       # y = @top_space
+       # @columns[i].each do |card|
+         # card.setPos x,y
+         # y += @overlap
+       # end
+    # end
+    # @columns.each do |col| 
+      # col.last.face_up!
+      # col.last.setMovable true
+    # end
   end 
 end
 
