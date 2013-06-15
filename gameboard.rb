@@ -24,18 +24,7 @@ class Deck < Qt::GraphicsItem
     @width = 100
     @height = 100
   end
-  def discard
-    @discards = []
-    @cards.each do |card|
-      if not card.held?
-        @discards << card
-        @cards.delete card
-      end
-    end
-  end
-  def discarded_cards
-    
-  end  
+  
   def paint painter, options, widget    
    #   painter.drawPixmap 0,0, @front_pixmap
     path = Qt::PainterPath.new
@@ -69,7 +58,8 @@ class Hand < Qt::GraphicsItem
   def initialize number_of_cards, card_width
     super nil
     @enabled = false
-    @cards = []
+    @cards = Array.new(5) # 5 nils
+    @discards = Array.new(5)
     @boundary = 10
     @top_boundary = 60
     @space_between_cards = 10
@@ -84,8 +74,19 @@ class Hand < Qt::GraphicsItem
   def disable
     @enabled = false
   end
+  def discard    
+    @cards.each_with_index do |card, ind|
+      if not card.held?
+        @discards
+        @cards.delete card
+      end
+    end
+  end
+  def discards
+    @discards.compact
+  end
   def add card
-    hand_card = CardInHand.new card
+    #hand_card = CardInHand.new card
     card.setParentItem self
     card.setPos(@boundary + @cards.length*(card.width+@space_between_cards), @top_boundary)
     card.face_up!
@@ -104,27 +105,31 @@ class Hand < Qt::GraphicsItem
     return @boundingRect
   end
   def card_clicked? pos
-    @cards.each do |card|
+    #cards can be in either row, the held or the discard row
+    all_cards = @cards.zip(@discards) # zip them together, each elemetn of this new array will be a 2 element array
+                                      # with one element a card from either row, and the other is a nil 
+    all_cards.each_with_index do |card,ind|      
+      card = (card.compact)[0]      
       if pos.x > card.pos.x and pos.x < card.pos.x+card.width and pos.y > card.pos.y and pos.y < card.pos.y+card.height
-        return card
+        return ind
       end
     end
     false
   end
   def mousePressEvent event
     return if not @enabled
-    card_clicked = card_clicked? event.pos
-    if card_clicked
-      if card_clicked.held?
-        card_clicked.unhold!
-        card_clicked.moveBy 0, -10
-      else
-        card_clicked.hold!
-        card_clicked.moveBy 0,+10
+    card_index = card_clicked? event.pos #returns index of card, or false otherwise
+    if card_index
+      if @cards[card_index] #if clicked card in @cards, put in discard pile and move up
+        @discards[card_index] = @cards[card_index]
+        @cards[card_index] = nil
+        @discards[card_index].moveBy 0, -30
+      else #if clicked card is in discard pile, put back in hold pile
+        @cards[card_index] = @discards[card_index]
+        @discards[card_index] = nil        
+        @cards[card_index].moveBy 0,+30
       end
     end
-    #puts "#{pos().x} #{pos.y()}"
-    #puts "#{scenePos().x} #{scenePos.y()}"
   end
   def paint painter, options, widget    
     #painter.drawPixmap 0,0, @front_pixmap
@@ -228,12 +233,12 @@ class Gameboard < Qt::Object
     form.setLayout grid_layout
     @scene.addItem form
     form.setPos @hand.pos.x, @hand.pos.y+@hand.height    
-    puts "#{form.height}"
   end
   def draw_deal
     if @state == :game_on
       @draw_dealPB.setText("Deal")
       @hand.disable
+      num_of_discards = @hand.discards.length
       @state = :game_off    
     else
       @hand.clear

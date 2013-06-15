@@ -4,7 +4,6 @@ class Card < Qt::GraphicsItem
   attr_reader :width, :height
   def initialize rank, suit, width, height, gameboard
     super nil
-    @held = true    
     @state = :down
     @rank = rank
     @suit = suit
@@ -29,15 +28,6 @@ class Card < Qt::GraphicsItem
     # painter.drawPath path
     # #painter.drawRect 0,0,@width-1,@height-1
     # painter.end
-  end
-  def held?
-    @held
-  end
-  def hold!
-    @held = true
-  end
-  def unhold!
-    @held = false
   end
   def setMovable move
     setFlag Qt::GraphicsItem::ItemIsMovable, move
