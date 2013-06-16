@@ -1,4 +1,4 @@
-require 'Qt'# @view.show
+require 'Qt'
 require './card.rb'
 
 # class MyView < Qt::GraphicsView
@@ -23,16 +23,21 @@ class Deck < Qt::GraphicsItem
     @boundingRect = Qt::RectF.new(0,0,@boundary*2,@boundary*2)
     @width = 100
     @height = 100
+    @pic = Qt::Pixmap.new("./pics/1_hearts.png")
+    puts "pic dim #{@pic.width} #{@pic.height}"    
+    @pic = @pic.scaledToWidth 100, Qt::SmoothTransformation
+    @pic.save("1_hearts_sm.png")
   end
   
   def paint painter, options, widget    
    #   painter.drawPixmap 0,0, @front_pixmap
+    painter.drawPixmap 0,0, @pic
     path = Qt::PainterPath.new
-    path.addRoundedRect 0,0,@width,@height, 3, 3
-    painter.setPen Qt::SolidLine    
-    painter.setBrush Qt::Brush.new(Qt::white,Qt::SolidPattern)
+    #path.addRoundedRect 0,0,@width,@height, 3, 3
+    #painter.setPen Qt::SolidLine    
+    #painter.setBrush Qt::Brush.new(Qt::white,Qt::SolidPattern)
       # #painter.fillRect 1,1,@width-2,@height-2,Qt::yellow
-    painter.drawPath path
+    #painter.drawPath path
 #      painter.drawText 5,20, "#{@rank.to_s} #{@suit.to_s[0].upcase}"
     
   end
@@ -54,12 +59,12 @@ class Deck < Qt::GraphicsItem
 end
 
 class Hand < Qt::GraphicsItem
-  attr_reader :width, :height
+  attr_reader :width, :height, :cards
   def initialize number_of_cards, card_width
     super nil
     @enabled = false
-    @cards = Array.new(5) # 5 nils
-    @discards = Array.new(5)
+    @cards = Array.new(number_of_cards) # 5 nils
+    @discards = Array.new(number_of_cards)
     @boundary = 10
     @top_boundary = 60
     @space_between_cards = 10
@@ -87,15 +92,20 @@ class Hand < Qt::GraphicsItem
   end
   def add card
     #hand_card = CardInHand.new card
+    new_ind = @cards.index(nil)    
+    puts "-------------"
+    @cards.each {|card| puts "#{card}"}
+    puts "#{new_ind}"
     card.setParentItem self
-    card.setPos(@boundary + @cards.length*(card.width+@space_between_cards), @top_boundary)
-    card.face_up!
-    @cards << card
+    card.setPos(@boundary + new_ind*(card.width+@space_between_cards), @top_boundary)
+    card.face_up!    
+    @cards[new_ind] = card
     #@width = @boundary*2 + @cards.length*card.width + (@cards.length-1)*@space_between_cards
     @boundingRect.setWidth(@width)
   end
   def clear
-    @cards.clear
+    @cards = Array.new(5)
+    @discards = Array.new(5)
     items = childItems
     items.each do |item|
       scene.removeItem item
@@ -109,7 +119,7 @@ class Hand < Qt::GraphicsItem
     all_cards = @cards.zip(@discards) # zip them together, each elemetn of this new array will be a 2 element array
                                       # with one element a card from either row, and the other is a nil 
     all_cards.each_with_index do |card,ind|      
-      card = (card.compact)[0]      
+      card = (card.compact)[0]
       if pos.x > card.pos.x and pos.x < card.pos.x+card.width and pos.y > card.pos.y and pos.y < card.pos.y+card.height
         return ind
       end
@@ -119,15 +129,16 @@ class Hand < Qt::GraphicsItem
   def mousePressEvent event
     return if not @enabled
     card_index = card_clicked? event.pos #returns index of card, or false otherwise
+    puts "card index #{card_index}"
     if card_index
       if @cards[card_index] #if clicked card in @cards, put in discard pile and move up
         @discards[card_index] = @cards[card_index]
         @cards[card_index] = nil
-        @discards[card_index].moveBy 0, -30
+        @discards[card_index].moveBy 3, -30
       else #if clicked card is in discard pile, put back in hold pile
         @cards[card_index] = @discards[card_index]
         @discards[card_index] = nil        
-        @cards[card_index].moveBy 0,+30
+        @cards[card_index].moveBy -3,+30
       end
     end
   end
@@ -239,6 +250,10 @@ class Gameboard < Qt::Object
       @draw_dealPB.setText("Deal")
       @hand.disable
       num_of_discards = @hand.discards.length
+      num_of_discards.times do
+        @hand.add @deck.deal_card
+      end
+      score_hand @hand
       @state = :game_off    
     else
       @hand.clear
@@ -251,30 +266,69 @@ class Gameboard < Qt::Object
       @state = :game_on
     end
   end
-      
+  def set_straight hand
+    cards = hand.cards
+    cards[0].rank = 5
+    cards[1].rank = 6
+    cards[2].rank = 7
+    cards[3].rank = 8
+    cards[4].rank = 9
+    cards
+  end
+  def set_3_of_a_kind hand
+    cards = hand.cards
+    cards[2].rank = 9
+    cards[3].rank = 9
+    cards[4].rank = 9
+  end
   
-  
-  def add_deck_to_scene
-    # col = 0
-    # for i in 0...54
-      # card = @deck.deal_card
-      # @columns[col] << card
-      # @scene.addItem card
-      # col += 1
-      # col %= 10
-    # end
-    # for i in 0...10
-       # y = @top_space
-       # x = i*(@card_width+@card_spacer)+@border
-       # y = @top_space
-       # @columns[i].each do |card|
-         # card.setPos x,y
-         # y += @overlap
-       # end
-    # end
-    # @columns.each do |col| 
-      # col.last.face_up!
-      # col.last.setMovable true
-    # end
-  end 
+  def flush? hand
+    suit = cards[0].suit
+    if cards.select{|card| card.suit == suit}.length == 5
+      puts "Flush"
+      return true
+    end
+    false
+  end
+  def straight? hand
+    #still need to handle 10,j,q,k,a the ace fucks it all up
+    cards = set_straight hand
+    sorted = cards.sort { |card1,card2| card1.rank<=>card2.rank}
+    smallest = sorted[0].rank
+    sorted.map!{ |card| card.rank-smallest}
+    sum = sorted.reduce{ |sum, elem| sum + elem }
+    sorted.each {|card| puts card}
+    puts "#{sum} - sum"
+    if sum == 10 # if it's a straight then sorted with be 0,1,2,3,4
+      puts "Straight"
+      return true
+    end
+    false
+  end
+  def straight_flush? hand
+    if straight?(hand) and flush?(hand)
+      puts "straight flush"
+      return true
+    end
+    false
+  end
+  def royal_flush? hand
+    sorted = cards.sort{ |card1,card2| card1.rank <=> card2.rank}
+    #if straight_flush? and sorted.min or max to determine royal flush
+  end
+  def score_hand hand
+    # test hands in order from highest return to lowest
+    # because a straight flush is higher than a straight or a flush
+    
+    #probably should sort first
+    
+    cards = hand.cards
+    #cards.each{ |card| card.suit = :heart}    
+        
+    
+    #3 of a kind
+    sorted = cards.sort { |card1,card2| card1.rank<=>card2.rank}
+    
+    
+  end
 end

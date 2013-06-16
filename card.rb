@@ -1,7 +1,8 @@
 require 'Qt.rb'
 
 class Card < Qt::GraphicsItem
-  attr_reader :width, :height
+  attr_reader :width, :height, :suit, :rank
+  attr_writer :suit, :rank
   def initialize rank, suit, width, height, gameboard
     super nil
     @state = :down
