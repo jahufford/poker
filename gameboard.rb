@@ -1,62 +1,13 @@
 require 'Qt'
 require './card.rb'
-
+require './deck.rb'
 # class MyView < Qt::GraphicsView
   # def initialize parent
     # super
   # end  
 # end
 
-class Deck < Qt::GraphicsItem
-  attr_reader :boundingRect
-  def initialize card_width, card_height, parent
-    super nil    
-    @cards = []
-    #use one deck
-    [:hearts,:spades,:clubs,:diamonds].each do |suit|
-      (1..13).to_a.each do |rank|
-        @cards << Card.new(rank, suit, card_width, card_height, self)
-      end
-    end
-    shuffle    
-    @boundary = 10
-    @boundingRect = Qt::RectF.new(0,0,@boundary*2,@boundary*2)
-    @width = 100
-    @height = 100
-    @pic = Qt::Pixmap.new("./pics/1_hearts.png")
-    puts "pic dim #{@pic.width} #{@pic.height}"    
-    @pic = @pic.scaledToWidth 100, Qt::SmoothTransformation
-    @pic.save("1_hearts_sm.png")
-  end
-  
-  def paint painter, options, widget    
-   #   painter.drawPixmap 0,0, @front_pixmap
-    painter.drawPixmap 0,0, @pic
-    path = Qt::PainterPath.new
-    #path.addRoundedRect 0,0,@width,@height, 3, 3
-    #painter.setPen Qt::SolidLine    
-    #painter.setBrush Qt::Brush.new(Qt::white,Qt::SolidPattern)
-      # #painter.fillRect 1,1,@width-2,@height-2,Qt::yellow
-    #painter.drawPath path
-#      painter.drawText 5,20, "#{@rank.to_s} #{@suit.to_s[0].upcase}"
-    
-  end
-  def shuffle
-    @order = (0...52).to_a.shuffle
-    @index = 0
-  end
-  def deal_card
-    if @index >= 52
-      return nil
-    end
-    card = @cards[@order[@index]]
-    @index += 1    
-    card
-  end
-  def resize width, height
-    @cards.each{|card| card.resize width,height}
-  end  
-end
+
 
 class Hand < Qt::GraphicsItem
   attr_reader :width, :height, :cards
@@ -92,10 +43,7 @@ class Hand < Qt::GraphicsItem
   end
   def add card
     #hand_card = CardInHand.new card
-    new_ind = @cards.index(nil)    
-    puts "-------------"
-    @cards.each {|card| puts "#{card}"}
-    puts "#{new_ind}"
+    new_ind = @cards.index(nil)            
     card.setParentItem self
     card.setPos(@boundary + new_ind*(card.width+@space_between_cards), @top_boundary)
     card.face_up!    
@@ -144,12 +92,12 @@ class Hand < Qt::GraphicsItem
   end
   def paint painter, options, widget    
     #painter.drawPixmap 0,0, @front_pixmap
-    path = Qt::PainterPath.new
-    path.addRoundedRect 0,0,@width,@height, 3, 3
-    painter.setPen Qt::SolidLine    
-    painter.setBrush Qt::Brush.new(Qt::white,Qt::SolidPattern)
-    #painter.fillRect 1,1,@width-2,@height-2,Qt::yellow
-    painter.drawPath path       
+    # path = Qt::PainterPath.new
+    # path.addRoundedRect 0,0,@width,@height, 3, 3
+    # painter.setPen Qt::SolidLine    
+    # painter.setBrush Qt::Brush.new(Qt::white,Qt::SolidPattern)
+    # #painter.fillRect 1,1,@width-2,@height-2,Qt::yellow
+    # painter.drawPath path       
     #painter.drawText 5,20, "#{@rank.to_s} #{@suit.to_s[0].upcase}"
     #@cards.each { |card| card.paint painter}    
   end
@@ -171,13 +119,20 @@ class CardInHand
   end
 end
 
+class MyView < Qt::GraphicsView
+  def resizeEvent event
+    puts "resize"
+  end
+end
+   
+  
 class Gameboard < Qt::Object
   attr_accessor :view
   def initialize
     super
     @background_color = Qt::Color.new 25,150,25
     @scene = Qt::GraphicsScene.new 0,0, 800,600
-    @view =Qt::GraphicsView.new @scene    
+    @view = MyView.new @scene    
     @view.backgroundBrush = @background_color
     @view.resize 800,600
     @view.setWindowTitle "PokerGEMZ"
@@ -296,9 +251,8 @@ class Gameboard < Qt::Object
     sorted = cards.sort { |card1,card2| card1.rank<=>card2.rank}
     smallest = sorted[0].rank
     sorted.map!{ |card| card.rank-smallest}
-    sum = sorted.reduce{ |sum, elem| sum + elem }
-    sorted.each {|card| puts card}
-    puts "#{sum} - sum"
+    sum = sorted.reduce{ |sum, elem| sum + elem }    
+    
     if sum == 10 # if it's a straight then sorted with be 0,1,2,3,4
       puts "Straight"
       return true

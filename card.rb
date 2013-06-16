@@ -3,14 +3,14 @@ require 'Qt.rb'
 class Card < Qt::GraphicsItem
   attr_reader :width, :height, :suit, :rank
   attr_writer :suit, :rank
-  def initialize rank, suit, width, height, gameboard
-    super nil
-    @state = :down
+  def initialize rank, suit, front_pixmap, gameboard
+    super nil   
     @rank = rank
     @suit = suit
-    @width = width
-    @height = height
-    @gamebaord = gameboard        
+    @front_pixmap = front_pixmap
+    @width = @front_pixmap.width
+    @height = @front_pixmap.height
+    #@gameboard = gameboard        
     @boundingRect = Qt::RectF.new(0, 0, @width, @height)    
     # @front_pixmap = Qt::Pixmap.new @width, @height
     # painter = Qt::Painter.new @front_pixmap
@@ -37,24 +37,14 @@ class Card < Qt::GraphicsItem
     return @boundingRect
   end
   def paint painter, options, widget
-    if @state == :up
-   #   painter.drawPixmap 0,0, @front_pixmap
+      painter.drawPixmap 0,0,@front_pixmap
       path = Qt::PainterPath.new
-      path.addRoundedRect 0,0,@width,@height, 3, 3
+      path.addRoundedRect 0,0,@width,@height, 12, 12
       painter.setPen Qt::SolidLine    
-      painter.setBrush Qt::Brush.new(Qt::white,Qt::SolidPattern)
-      #painter.fillRect 1,1,@width-2,@height-2,Qt::yellow
+   #   painter.setBrush Qt::Brush.new(Qt::black,Qt::SolidPattern)
+      #painter.fillRect 0,0,@width,@height,Qt::yellow
       painter.drawPath path
-      painter.drawText 5,20, "#{@rank.to_s} #{@suit.to_s[0].upcase}"
-    else
-    #  painter.drawPixmap 0,0, @back_pixmap
-      path = Qt::PainterPath.new
-      path.addRoundedRect 0,0,@width,@height, 3, 3
-      painter.setPen Qt::SolidLine
-      painter.setBrush Qt::Brush.new(Qt::yellow,Qt::SolidPattern)
-      painter.fillRect 1,1,@width-2,@height-2,Qt::yellow
-      painter.drawPath path
-    end    
+     # painter.drawText 5,20, "#{@rank.to_s} #{@suit.to_s[0].upcase}"
   end
   def resize width, height
     @width, @height = width, height
