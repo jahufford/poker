@@ -11,7 +11,7 @@ require './deck.rb'
 
 class Hand < Qt::GraphicsItem
   attr_reader :width, :height, :cards
-  def initialize number_of_cards, card_width
+  def initialize number_of_cards, card_width, card_height
     super nil
     @enabled = false
     @cards = Array.new(number_of_cards) # 5 nils
@@ -21,8 +21,7 @@ class Hand < Qt::GraphicsItem
     @space_between_cards = 10
     @boundingRect = Qt::RectF.new(0,0,@boundary*2,@boundary+@top_boundary+200)
     @width = @boundary*2 + 4*@space_between_cards + 5*card_width 
-    @height = @boundary + @top_boundary + 100
-    #setFlag Qt::GraphicsItem::ItemIsMovable, true
+    @height = @boundary + @top_boundary + card_height
   end
   def enable
     @enabled = true
@@ -47,8 +46,7 @@ class Hand < Qt::GraphicsItem
     card.setParentItem self
     card.setPos(@boundary + new_ind*(card.width+@space_between_cards), @top_boundary)
     card.face_up!    
-    @cards[new_ind] = card
-    #@width = @boundary*2 + @cards.length*card.width + (@cards.length-1)*@space_between_cards
+    @cards[new_ind] = card    
     @boundingRect.setWidth(@width)
   end
   def clear
@@ -76,17 +74,18 @@ class Hand < Qt::GraphicsItem
   end
   def mousePressEvent event
     return if not @enabled
-    card_index = card_clicked? event.pos #returns index of card, or false otherwise
-    puts "card index #{card_index}"
+    card_index = card_clicked? event.pos #returns index of card, or false otherwise    
     if card_index
-      if @cards[card_index] #if clicked card in @cards, put in discard pile and move up
-        @discards[card_index] = @cards[card_index]
-        @cards[card_index] = nil
-        @discards[card_index].moveBy 3, -30
+      if @cards[card_index] #if clicked card in @cards, put in discard pile and move up        
+         @discards[card_index] = @cards[card_index]
+         @cards[card_index] = nil
+         #@discards[card_index].face_down!
+         @discards[card_index].moveBy 3, -50        
       else #if clicked card is in discard pile, put back in hold pile
         @cards[card_index] = @discards[card_index]
-        @discards[card_index] = nil        
-        @cards[card_index].moveBy -3,+30
+        @discards[card_index] = nil
+        #@cards[card_index].face_up!
+        @cards[card_index].moveBy -3,+50
       end
     end
   end
@@ -103,25 +102,9 @@ class Hand < Qt::GraphicsItem
   end
 end
 
-class CardInHand
-  attr_accessor :card
-  def initialize card
-    @card = card
-    @held = true
-  end
-  def hold
-    @hold = true
-  end
-  def held?
-    @hold
-  end
-  def paint painter
-  end
-end
-
 class MyView < Qt::GraphicsView
   def resizeEvent event
-    puts "resize"
+    #puts "resize"
   end
 end
    
@@ -135,27 +118,31 @@ class Gameboard < Qt::Object
     @view = MyView.new @scene    
     @view.backgroundBrush = @background_color
     @view.resize 800,600
-    @view.setWindowTitle "PokerGEMZ"
+    #@view.setWindowTitle "PokerGEMZ"
   
     @border = 15
     @top_space = 50
     @card_spacer = 10
     @overlap = 30
     
-    @card_width = (@view.width()-(2*@border))/10 - @card_spacer
-    @card_height = 100
-    @deck = Deck.new @card_width,@card_height, self
+    @deck = Deck.new self
     @scene.addItem @deck
-    @deck.setPos @view.width-300,100
+    @card_width = @deck.card_width
+    @card_height = @deck.card_height    
+    @deck.setPos 100,100
+    @deck.set_on_click self, :draw_deal
+    # @deck.connect(SIGNAL :clicked) do
+      # draw_deal
+    # end
     
-    @hand = Hand.new 5, @card_width 
+    @hand = Hand.new 5, @card_width, @card_height 
     @scene.addItem @hand
     
     @state = :game_off
     @draw_dealPB = Qt::PushButton.new "Deal"
     @draw_dealPBGW = @scene.addWidget(@draw_dealPB)
     #draw_deal
-    @hand.setPos (@view.width-@hand.width)/2, @view.height-250    
+    @hand.setPos (@view.width-@hand.width)/2, @view.height-@hand.height-100    
    # @draw_deal_pb.move @hand.pos.x+@hand.width+20, @hand.pos.y+@hand.height - @draw_deal_pb.height
     @draw_dealPB.connect(SIGNAL :clicked) do
       draw_deal
@@ -198,7 +185,9 @@ class Gameboard < Qt::Object
     form = Qt::GraphicsWidget.new
     form.setLayout grid_layout
     @scene.addItem form
-    form.setPos @hand.pos.x, @hand.pos.y+@hand.height    
+    form.setPos @hand.pos.x, @hand.pos.y+@hand.height
+    
+    #game = @view.menuBar().addMenu "&Game"
   end
   def draw_deal
     if @state == :game_on
@@ -221,23 +210,8 @@ class Gameboard < Qt::Object
       @state = :game_on
     end
   end
-  def set_straight hand
-    cards = hand.cards
-    cards[0].rank = 5
-    cards[1].rank = 6
-    cards[2].rank = 7
-    cards[3].rank = 8
-    cards[4].rank = 9
-    cards
-  end
-  def set_3_of_a_kind hand
-    cards = hand.cards
-    cards[2].rank = 9
-    cards[3].rank = 9
-    cards[4].rank = 9
-  end
   
-  def flush? hand
+  def flush? cards
     suit = cards[0].suit
     if cards.select{|card| card.suit == suit}.length == 5
       puts "Flush"
@@ -245,44 +219,160 @@ class Gameboard < Qt::Object
     end
     false
   end
-  def straight? hand
-    #still need to handle 10,j,q,k,a the ace fucks it all up
-    cards = set_straight hand
+  def straight? cards
     sorted = cards.sort { |card1,card2| card1.rank<=>card2.rank}
-    smallest = sorted[0].rank
-    sorted.map!{ |card| card.rank-smallest}
-    sum = sorted.reduce{ |sum, elem| sum + elem }    
+    sorted.map!{ |card| card.rank}    
     
-    if sum == 10 # if it's a straight then sorted with be 0,1,2,3,4
-      puts "Straight"
+    if sorted[0] == 1 and sorted[1] != 2 # treat ace as one if the next card is 2, otherwise treat as 14
+      sorted[0] = 14
+      sorted.sort!
+    end
+    
+    straight = true
+    sorted.reduce do |a,b|
+      if a != (b-1)        
+        return false
+      end
+      b
+    end
+    puts "Straight"
+    true
+  end
+  
+  def straight_flush? cards
+    if straight?(cards) and flush?(cards)
+      puts "Straight Flush"
       return true
     end
     false
   end
-  def straight_flush? hand
-    if straight?(hand) and flush?(hand)
-      puts "straight flush"
-      return true
-    end
-    false
-  end
-  def royal_flush? hand
+  
+  def royal_flush? cards
     sorted = cards.sort{ |card1,card2| card1.rank <=> card2.rank}
-    #if straight_flush? and sorted.min or max to determine royal flush
+    ranks = sorted.map{|card| card.rank}
+    sorted[0].rank = 14 if sorted[0].rank == 1   
+    if (straight_flush? sorted) and (sorted.map{|card|card.rank}.max == 14)
+      puts "Royal Flush"
+      return true
+    end
+    false
+  end
+  
+  def pair? cards
+    sets = find_sets(cards)   
+    if sets.length == 1
+      if sets[0][0] == 2      
+        puts "pair #{sets[0][1]}'s"
+        return true
+      end
+    end
+    false
+  end  
+  def three_of_kind? cards
+    sets = find_sets(cards)   
+    if sets.length == 1
+      if sets[0][0] == 3      
+        puts "three #{sets[0][1]}'s"
+        return true
+      end
+    end
+    false
+  end
+  def four_of_kind? cards
+    sets = find_sets(cards)   
+    if sets.length == 1
+      if sets[0][0] == 4      
+        puts "four #{sets[0][1]}'s"
+        return true
+      end
+    end
+    false
+  end
+  def two_pair? cards
+    sets = find_sets(cards)   
+    if sets.length == 2
+      if sets[0][0] == 2 and sets[1][0] == 3
+        puts "Full House: three #{sets[1][1]}'s and pair of #{sets[0][1]}'s"
+    end
+  end
+  def full_house? cards
+    sets = find_sets(cards)   
+    if sets.length == 2
+      if sets[0][0] == 2 and sets[1][0] == 2
+        puts "Two Pair: pair #{sets[1][1]}'s and pair of #{sets[0][1]}'s"
+    end
+  end
+  def mocked_hand hand, rank,suit
+    cards = hand.cards
+    cards.each_with_index do |card, ind|
+      card.rank = rank[ind] unless rank[ind].nil?
+      card.suit = suit[ind] unless suit[ind].nil?
+    end
+    cards
+  end
+  def pc cards #print cards
+    str = ""
+    cards.each do |card|
+      str += "["+card.rank.to_s+","+card.suit.to_s+"]"
+    end    
+    puts str
+  end
+  def find_sets cards
+    #this function finds the number of multiple of a card ranks in a hand
+    # ie, if the hand has 1,1,5,5,7 the return is [[2,1],[2,5]]
+    #     if the hand has 5,5,7,7,7 the return is [[2,5],[3,7]]
+    #     if the hand has 4,4,4,4,4 the return is [[5,4]]
+    #     if the hand has 2,3,8,8,9 the return is [[2,8]]
+    sorted = cards.sort { |card1,card2| card1.rank<=>card2.rank}
+    sets = []
+    cnt = 1
+    last = sorted.reduce do |a,b|
+      if a.rank==b.rank
+        cnt += 1
+      else        
+        sets << [cnt,a.rank] if cnt>1
+        cnt = 1
+      end
+      b
+    end
+    sets << [cnt,last.rank] if cnt>1    
+    sets.sort!{|a,b| a[0]<=>b[0]}
+  end
+  def set_test cards
+    sets = find_sets(cards)   
+    if sets.length == 2
+      if sets[0][0] == 2 and sets[1][0] == 3
+        puts "Full House: three #{sets[1][1]}'s and pair of #{sets[0][1]}'s"
+      else # it's 2 pair
+        puts "two pair: pair of #{sets[0][1]}'s and pair of #{sets[1][1]}"
+      end
+    elsif sets.length == 1
+      case sets[0][0]      
+      when 4
+        puts "four #{sets[0][1]}'s"
+      when 3
+        puts "three #{sets[0][1]}'s"
+      when 2
+        puts "pair #{sets[0][1]}'s"
+      end
+    else
+      puts "no sets"
+    end
   end
   def score_hand hand
     # test hands in order from highest return to lowest
     # because a straight flush is higher than a straight or a flush
     
-    #probably should sort first
-    
     cards = hand.cards
-    #cards.each{ |card| card.suit = :heart}    
-        
     
-    #3 of a kind
-    sorted = cards.sort { |card1,card2| card1.rank<=>card2.rank}
-    
-    
+    if royal_flush? cards
+    elsif straight_flush? cards
+    elsif four_of_kinds? cards
+    elsif full_house? cards
+    elsif flush? cards
+    elsif straight? cards
+    elsif two_pair? cards
+    elsif pair? cards     
+    end
   end
 end

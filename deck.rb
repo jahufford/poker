@@ -1,6 +1,9 @@
+require './card.rb'
+
 class Deck < Qt::GraphicsItem
-  attr_reader :boundingRect, :card_width, :card_height
-  def initialize card_width, card_height, parent
+  attr_reader :boundingRect, :card_width, :card_height  
+  signals 'clicked()'
+  def initialize parent
     super nil    
     @cards = []
     #use one deck
@@ -8,19 +11,17 @@ class Deck < Qt::GraphicsItem
     i = 0
     [:hearts,:spades,:diamonds,:clubs].each do |suit|
       (1..13).to_a.each do |rank|
-        @cards << Card.new(rank, suit, @card_fronts[i], self)
+        @cards << Card.new(rank, suit, @card_fronts[i], @card_back)
         i += 1
       end
     end
     shuffle    
     @boundary = 10
-    @boundingRect = Qt::RectF.new(0,0,@boundary*2,@boundary*2)
-    @width = 100
-    @height = 100
+        
+    @boundingRect = Qt::RectF.new(5,0,@card_width,@card_height)
   end
   
-  def paint painter, options, widget    
-   #   painter.drawPixmap 0,0, @front_pixmap
+  def paint painter, options, widget
     y = 10
     (0..5).each do |x|
       painter.drawPixmap x,y, @card_back
@@ -61,5 +62,12 @@ class Deck < Qt::GraphicsItem
   end
   def resize width, height
     @cards.each{|card| card.resize width,height}
-  end  
+  end
+  def mousePressEvent event
+    @on_click_receiver.send(@on_click_func)
+  end 
+  def set_on_click receiver, func
+    @on_click_receiver = receiver
+    @on_click_func = func
+  end
 end
