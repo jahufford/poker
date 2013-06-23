@@ -174,6 +174,76 @@ end
 
 class DeucesWildScoring
   class << self
+    def royal_flush? cards # natural royal flush
+      sorted = cards.sort{ |card1,card2| card1.rank <=> card2.rank}
+      ranks = sorted.map{|card| card.rank}
+      sorted[0] = sorted[0].dup # need to dup it so cards doesn't change outside this function
+      sorted[0].rank = 14 if sorted[0].rank == 1   
+      if (straight_flush? sorted)
+        if(sorted.map{|card|card.rank}.max == 14) and sorted.select{|card| card.rank ==2}.empty? 
+        # puts "Royal Flush"
+          return true
+        end
+      end
+      false
+    end
+    def four_deuces? cards
+      if cards.count{|card| card.rank==2} == 4
+        return true
+      end
+      false
+    end
+    def wild_royal_flush? cards
+      sorted = cards.sort{ |card1,card2| card1.rank <=> card2.rank}
+      ranks = sorted.map{|card| card.rank}
+      sorted[0] = sorted[0].dup # need to dup it so cards doesn't change outside this function
+      sorted[0].rank = 14 if sorted[0].rank == 1   
+      if (straight_flush? sorted)
+        max_card = sorted.map{|card| card.rank}.max
+        deuce_num = sorted.select{|card| card.rank==2}.length
+        if max_card >= 14-deuce_num
+        # puts "Royal Flush"
+          return true
+        end
+      end
+      false
+    end
+    def five_of_kind? cards
+      sets = find_sets(cards)
+      if sets.length == 1 # set would only be a one, since a full house would be picked up earlier
+        if sets[0][0] == 5      
+         # puts "1three #{sets[0][1]}'s"
+          return true        
+        end    
+      end
+      false
+    end    
+    def straight_flush? cards
+      if straight?(cards) and flush?(cards)
+       # puts "Straight Flush"
+        return true
+      end
+      false
+    end
+    def four_of_kind? cards
+      sets = find_sets(cards) 
+      if sets.length == 1
+        if sets[0][0] == 4      
+         # puts "four #{sets[0][1]}'s"
+          return true
+        end
+      end
+      false
+    end
+    def full_house? cards      
+      sets = find_sets(cards)   
+      if sets.length == 2
+        if sets[0][0] == 2 and sets[1][0] == 3
+         # puts "Full House: three #{sets[1][1]}'s and pair of #{sets[0][1]}'s"
+          return true
+        end
+      end
+    end
     def flush? cards
       wilds, regulars = cards.partition{|card| card.rank ==2}      
       suit = regulars[0].suit      
@@ -209,39 +279,6 @@ class DeucesWildScoring
       #puts "Straight"
       true
     end
-    
-    def straight_flush? cards
-      if straight?(cards) and flush?(cards)
-       # puts "Straight Flush"
-        return true
-      end
-      false
-    end
-    
-    def royal_flush? cards
-      sorted = cards.sort{ |card1,card2| card1.rank <=> card2.rank}
-      ranks = sorted.map{|card| card.rank}
-      sorted[0] = sorted[0].dup # need to dup it so cards doesn't change outside this function
-      sorted[0].rank = 14 if sorted[0].rank == 1   
-      if (straight_flush? sorted)
-        if(sorted.map{|card|card.rank}.max == 14)
-        # puts "Royal Flush"
-          return true
-        end
-      end
-      false
-    end
-    
-    def pair? cards
-      sets = find_sets(cards)   
-      if sets.length == 1
-        if (sets[0][0] == 2) and ((sets[0][1]>=11) or (sets[0][1]==1)  )# jacks or better      
-         # puts "pair #{sets[0][1]}'s"
-          return true
-        end
-      end
-      false
-    end  
     def three_of_kind? cards
 #      sorted = cards.sort{|a,b| a.rank<=>b.rank}
       # if sorted[0].rank ==1
@@ -257,17 +294,7 @@ class DeucesWildScoring
       end
       false
     end
-    def four_of_kind? cards
-      sets = find_sets(cards) 
-      if sets.length == 1
-        if sets[0][0] == 4      
-         # puts "four #{sets[0][1]}'s"
-          return true
-        end
-      end
-      false
-    end
-    def two_pair? cards
+    def two_pair? cards #probably not needed
       sets = find_sets(cards)   
       if sets.length == 2
         if sets[0][0] == 2 and sets[1][0] == 2
@@ -276,15 +303,16 @@ class DeucesWildScoring
         end
       end
     end
-    def full_house? cards      
+    def pair? cards # probably not needed
       sets = find_sets(cards)   
-      if sets.length == 2
-        if sets[0][0] == 2 and sets[1][0] == 3
-         # puts "Full House: three #{sets[1][1]}'s and pair of #{sets[0][1]}'s"
+      if sets.length == 1
+        if (sets[0][0] == 2) and ((sets[0][1]>=11) or (sets[0][1]==1)  )# jacks or better      
+         # puts "pair #{sets[0][1]}'s"
           return true
         end
       end
-    end       
+      false
+    end
     def find_sets cards
       #this function finds the number of multiple of a card ranks in a hand
       # ie, if the hand has 1,1,5,5,7 the return is [[2,1],[2,5]]
@@ -345,27 +373,36 @@ class DeucesWildScoring
       end
     end
     def score_hand cards
-       if royal_flush? cards
-         result = :royal_flush
-         puts "royal flush"
-       elsif straight_flush? cards
-         result = :straight_flush
-         puts "straight flush"
-       elsif four_of_kind? cards
-         result = :four_of_kind
-         puts "four of a kind"
-       elsif full_house? cards
-         result = :full_house
-         puts "full house"
-       elsif flush? cards
-         result = :flush
-         puts "flush"
-       elsif straight? cards
-         result = :straight
-         puts "straight"
-       elsif three_of_kind? cards
-         result = :three_of_kind
-         puts "three of a kind"
+      if royal_flush? cards
+        result = :royal_flush
+        puts "royal flush"
+      elsif four_deuces? cards
+        result = :four_deuces
+        puts "four deuces"
+      elsif wild_royal_flush? cards
+        result = :wild_royal_flush
+        puts "wild royal flush"
+      elsif five_of_kind? cards
+        result = :five_of_kind
+        puts "five of a kind"
+      elsif straight_flush? cards
+        result = :straight_flush
+        puts "straight flush"       
+      elsif four_of_kind? cards
+        result = :four_of_kind
+        puts "four of a kind"
+      elsif full_house? cards
+        result = :full_house
+        puts "full house"
+      elsif flush? cards
+        result = :flush
+        puts "flush"
+      elsif straight? cards
+        result = :straight
+        puts "straight"
+      elsif three_of_kind? cards
+        result = :three_of_kind
+        puts "three of a kind"
       # elsif two_pair? cards
          # result = :two_pair
          # puts "two pair"

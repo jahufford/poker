@@ -329,8 +329,26 @@ class Gameboard < Qt::Object
     # cards = mocked_hand hand, [3,2,2,10,11],[:heart,:spade,:club,:heart,:spade] #royal flush
     # @rules.score_hand cards
     
-   # cards = mocked_hand hand, [3,4,5,2,10],[:heart,:spade,:club,:heart,:spade] #royal flush
-   # @rules.score_hand cards
+    # cards = mocked_hand hand, [10,11,12,13,1],[:heart,:heart,:heart,:heart,:heart] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [2,11,12,13,1],[:heart,:heart,:heart,:heart,:heart] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [10,11,12,13,2],[:heart,:heart,:heart,:heart,:heart] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [10,11,12,2,2],[:heart,:heart,:heart,:heart,:heart] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [10,11,2,2,2],[:heart,:heart,:heart,:spade,:club] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [10,2,2,2,2],[:heart,:diamond,:heart,:spade,:club] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [10,1,2,2,2],[:heart,:diamond,:heart,:spade,:club] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,1,2,2,2],[:heart,:diamond,:heart,:spade,:club] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,1,1,2,2],[:heart,:diamond,:club,:spade,:club] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,1,1,2,1],[:heart,:diamond,:club,:spade,:spade] #royal flush
+    # @rules.score_hand cards
    # hand conflicts? - order of testing enough?   
    
     result = @rules.score_hand cards
