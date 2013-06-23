@@ -62,8 +62,27 @@
   # end
 # end
 
-class JacksOrBetterPayTable
+class BasePaytable < Qt::Object
+  slots 'adjust()'
   def initialize
+    super
+  end
+  def adjust()
+    dialog = PaytableDialog.new nil
+    dialog.exec
+  end
+end
+
+class PaytableDialog < Qt::Dialog
+  def initialize parent
+    super parent
+    setWindowTitle "Adjust Paytable"
+  end
+end
+
+class JacksOrBetterPayTable < BasePaytable
+  def initialize
+    super
     @multiples = { royal_flush:250,
                    straight_flush:50,
                    four_of_kind:25,
@@ -81,7 +100,7 @@ class JacksOrBetterPayTable
   end
 end
 
-class DeucesWildPayTable
+class DeucesWildPayTable < BasePaytable
   def initialize
     @multiples = { royal_flush:940,        
                    four_deuces:400,
@@ -98,38 +117,5 @@ class DeucesWildPayTable
   def return_multiplier hand_result
     return @multiples[hand_result] if @multiples.key? hand_result
     return 0
-  end
-end
-
-class CustomPayTable  
-  def return_multiplier hand_result
-    multiplier = 0
-    case hand_result
-      when :royal_flush
-        multiplier = 940        
-      when :four_deuces
-        multiplier = 400
-      when :wild_royal_flush
-        multiplier = 25
-      when :five_of_kind
-        multipler = 16
-      when :straight_flush
-        multiplier = 13
-      when :four_of_kind
-        multiplier = 4
-      when :full_house
-        multiplier = 3
-      when :flush
-        multiplier = 2
-      when :straight
-        multiplier = 2
-      when :three_of_kind
-        multiplier = 1
-      #when :two_pair
-      #  multiplier = 2
-      #when :pair
-      # multiplier = 1
-    end
-    multiplier
   end
 end

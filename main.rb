@@ -35,7 +35,6 @@ class MainMenu < Qt::Widget
   def initialize
     super    
     jacks_or_betterPB = Qt::PushButton.new "Jacks or Better"
-    #connect(jacks_or_betterPB, SIGNAL('clicked()'), self, SLOT('button_clicked()'))    
     jacks_or_betterPB.connect(SIGNAL :clicked) do
       emit selection(RubyVariant.new("jacks_or_better"))
     end
@@ -59,19 +58,7 @@ class MainWindow < Qt::MainWindow
     super
     setWindowTitle "PokerGEMZ"
     #gameboard = Gameboard.new
-    game = menuBar().addMenu "&Game"
-    new_action = Qt::Action.new "&New Game", self
-    options_action = Qt::Action.new "&Options", self
-    options_action.connect(SIGNAL :triggered) do
-      OptionsDialog.new.exec
-    end
-    quit_action = Qt::Action.new "&Quit", self
-    quit_action.connect(SIGNAL :triggered) do 
-      Qt::Application.quit
-    end 
-    game.addAction new_action    
-    game.addAction options_action    
-    game.addAction quit_action
+    setup_menubar    
     $statusBar = statusBar()
     statusBar.show
     show_main_menu
@@ -84,7 +71,7 @@ class MainWindow < Qt::MainWindow
     @main_menu = MainMenu.new 
     @main_menu.connect(SIGNAL('selection(QVariant)')) do |game|
       construct_game game.value
-    end
+    end    
     setCentralWidget @main_menu
     #update
     #@main_menu.resize(@gameboard.view.width, @gameboard.view.height)
@@ -101,10 +88,34 @@ class MainWindow < Qt::MainWindow
       setWindowTitle "PokerGEMZ - Deuces Wild"
     end
     @gameboard = Gameboard.new(rules,paytable)
+    @paytable_action.setEnabled true    
+    connect(@paytable_action,SIGNAL('triggered()'),paytable, SLOT('adjust()'))
     connect(@gameboard,SIGNAL('quit()'),self,SLOT('show_main_menu()'))
    # @gameboard.connect(SIGNAL('quit()'), self, SLOT('show_main_menu()'))
     resize(@gameboard.view.width+100, @gameboard.view.height+100)    
     setCentralWidget @gameboard.view
+  end
+  def setup_menubar
+    game = menuBar().addMenu "&Game"
+    new_action = Qt::Action.new "&New Game", self
+    options_action = Qt::Action.new "&Options", self
+    options_action.connect(SIGNAL :triggered) do
+      OptionsDialog.new.exec
+    end
+    quit_action = Qt::Action.new "&Quit", self
+    quit_action.connect(SIGNAL :triggered) do 
+      Qt::Application.quit
+    end 
+    game.addAction new_action    
+    game.addAction options_action    
+    game.addAction quit_action
+ 
+    options = menuBar().addMenu "&Options"
+    @paytable_action = Qt::Action.new "Adjust &Paytable", self
+    
+    options.addAction @paytable_action
+    @paytable_action.setEnabled false   
+        
   end
 end
 

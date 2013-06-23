@@ -12,7 +12,7 @@ class JacksOrBetterScoring
       sorted = cards.sort { |card1,card2| card1.rank<=>card2.rank}
       sorted.map!{ |card| card.rank}          
       if sorted[0] == 1 and sorted[1] != 2 # treat ace as one if the next card is 2, otherwise treat as 14
-        sorted[0] = sorted[0].dup # dup it so it doesn't change cards outside this func
+        #sorted[0] = sorted[0].dup # dup it so it doesn't change cards outside this func
         sorted[0] = 14
         sorted.sort!
       end
