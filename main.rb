@@ -74,10 +74,10 @@ class MainWindow < Qt::MainWindow
     game.addAction quit_action
     $statusBar = statusBar()
     statusBar.show
-    #show_main_menu
-    @gameboard = Gameboard.new( DeucesWildScoring,DeucesWildPayTable)
-    setCentralWidget @gameboard.view    
-    resize(@gameboard.view.width+100, @gameboard.view.height+100)    
+    show_main_menu
+    # @gameboard = Gameboard.new( DeucesWildScoring,DeucesWildPayTable)
+    # setCentralWidget @gameboard.view    
+    # resize(@gameboard.view.width+100, @gameboard.view.height+100)    
   end
   def show_main_menu    
     @gameboard.view.hide unless @gameboard.nil?
@@ -93,11 +93,11 @@ class MainWindow < Qt::MainWindow
     case game
     when "jacks_or_better"
       rules = JacksOrBetterScoring
-      paytable = JacksOrBetterPayTable
+      paytable = JacksOrBetterPayTable.new
       setWindowTitle "PokerGEMZ - Jacks or Better"
     when "deuces_wild"
       rules = DeucesWildScoring
-      paytable = DeucesWildPayTable
+      paytable = DeucesWildPayTable.new
       setWindowTitle "PokerGEMZ - Deuces Wild"
     end
     @gameboard = Gameboard.new(rules,paytable)
