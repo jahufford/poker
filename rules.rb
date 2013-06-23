@@ -366,12 +366,12 @@ class DeucesWildScoring
        elsif three_of_kind? cards
          result = :three_of_kind
          puts "three of a kind"
-      elsif two_pair? cards
-         result = :two_pair
-         puts "two pair"
-      elsif pair? cards
-        result = :pair
-        puts "pair"
+      # elsif two_pair? cards
+         # result = :two_pair
+         # puts "two pair"
+      # elsif pair? cards
+        # result = :pair
+        # puts "pair"
       else
         results = :nothing # add to above?
         puts "nothing"             

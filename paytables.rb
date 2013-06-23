@@ -33,17 +33,17 @@ class DeucesWildPayTable
       multiplier = 0
       case hand_result
         when :royal_flush
-          multiplier = 300        
+          multiplier = 940        
         when :four_deuces
-          multiplier = 200
+          multiplier = 400
         when :wild_royal_flush
           multiplier = 25
         when :five_of_kind
-          multipler = 15
+          multipler = 16
         when :straight_flush
-          multiplier = 9
+          multiplier = 13
         when :four_of_kind
-          multiplier = 5
+          multiplier = 4
         when :full_house
           multiplier = 3
         when :flush

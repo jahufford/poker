@@ -329,13 +329,13 @@ class Gameboard < Qt::Object
     # cards = mocked_hand hand, [3,2,2,10,11],[:heart,:spade,:club,:heart,:spade] #royal flush
     # @rules.score_hand cards
     
-    cards = mocked_hand hand, [3,4,5,2,10],[:heart,:spade,:club,:heart,:spade] #royal flush
-    @rules.score_hand cards
+   # cards = mocked_hand hand, [3,4,5,2,10],[:heart,:spade,:club,:heart,:spade] #royal flush
+   # @rules.score_hand cards
    # hand conflicts? - order of testing enough?   
    
-   # result = @rules.score_hand cards
-    # multiplier = @paytable.return_multiplier result
-    # @credits += @bet*multiplier
-    # @creditsL.setText("Credits: " + @credits.to_s)
+    result = @rules.score_hand cards
+    multiplier = @paytable.return_multiplier result
+    @credits += @bet*multiplier
+    @creditsL.setText("Credits: " + @credits.to_s)
   end
 end
