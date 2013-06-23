@@ -4,19 +4,19 @@ class JacksOrBetterPayTable
       multiplier = 0
       case hand_result
         when :royal_flush
-          multiplier = 200
+          multiplier = 250
         when :straight_flush
-          multiplier = 100
-        when :four_of_kind
           multiplier = 50
+        when :four_of_kind
+          multiplier = 25
         when :full_house
-          multiplier = 5
+          multiplier = 9
         when :flush
-          multiplier = 4
+          multiplier = 6
         when :straight
-          multiplier = 3
+          multiplier = 4
         when :three_of_kind
-          multiplier = 2
+          multiplier = 3
         when :two_pair
           multiplier = 2
         when :pair
@@ -33,25 +33,25 @@ class DeucesWildPayTable
       multiplier = 0
       case hand_result
         when :royal_flush
-          multiplier = 200
-        when :royal_flush_with_deuce
-          multiplier = 50
+          multiplier = 300        
         when :four_deuces
-          multiplier = 150
+          multiplier = 200
+        when :wild_royal_flush
+          multiplier = 25
         when :five_of_kind
-          multipler = 100
+          multipler = 15
         when :straight_flush
-          multiplier = 100
+          multiplier = 9
         when :four_of_kind
-          multiplier = 50
-        when :full_house
           multiplier = 5
-        when :flush
-          multiplier = 4
-        when :straight
+        when :full_house
           multiplier = 3
-        when :three_of_kind
+        when :flush
           multiplier = 2
+        when :straight
+          multiplier = 2
+        when :three_of_kind
+          multiplier = 1
         #when :two_pair
         #  multiplier = 2
         #when :pair

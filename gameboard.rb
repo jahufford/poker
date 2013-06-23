@@ -248,14 +248,94 @@ class Gameboard < Qt::Object
     # because a straight flush is higher than a straight or a flush
     
     cards = hand.cards
+    
+    # cards = mocked_hand hand, [1,13,12,10,11],[:heart,:heart,:heart,:heart,:heart] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,13,2,10,11],[:heart,:heart,:heart,:heart,:heart] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [2,13,12,10,11],[:heart,:heart,:heart,:heart,:heart] #royal flush wrong
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,13,2,2,11],[:heart,:heart,:heart,:heart,:heart] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,13,2,2,2],[:heart,:heart,:heart,:heart,:heart] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [9,13,2,10,11],[:heart,:heart,:heart,:heart,:heart] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [7,3,4,5,6],[:heart,:heart,:heart,:heart,:heart] #straight flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [2,3,4,5,1],[:heart,:heart,:heart,:heart,:heart] #straight flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [2,3,4,5,1],[:heart,:heart,:heart,:heart,:spade] #straight 
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [2,3,4,5,1],[:diamonds,:heart,:heart,:heart,:heart] #straight flush
+    # @rules.score_hand cards
+    
     #pc cards
-  # cards = mocked_hand hand, [8,1,6,1,13],[:clubs,:spades,:hearts,:clubs,:diamonds]
-    pc cards
-   # result = JacksOrBetterScoring.score_hand cards    
-   # multiplier = JacksOrBetterPayTable.return_multiplier result
-    result = @rules.score_hand cards
-    multiplier = @paytable.return_multiplier result
-    @credits += @bet*multiplier
-    @creditsL.setText("Credits: " + @credits.to_s)
+    #straight test
+    # cards = mocked_hand hand, [5,6,7,2,2],[nil,nil,nil,nil,nil] #straight
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [5,7,8,2,2],[nil,nil,nil,nil,nil] #straight
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [5,7,9,2,2],[nil,nil,nil,nil,nil] #straight
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [5,8,9,2,2],[nil,nil,nil,nil,nil] #straight
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [5,7,9,2,2],[nil,nil,nil,nil,nil] #straight
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,2,2,10,13],[nil,nil,nil,nil,nil] #straight
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,2,2,9,13],[nil,nil,nil,nil,nil] #not
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,2,2,4,5],[nil,nil,nil,nil,nil] #straight #broken
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,2,2,4,6],[nil,nil,nil,nil,nil] #not
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,2,2,4,6],[nil,nil,nil,nil,nil] #not
+    # @rules.score_hand cards
+    # pc cards
+    
+    #flush test
+    # cards = mocked_hand hand, [5,7,8,4,5],[:hearts,:hearts,:hearts,:hearts,:hearts]
+    # @rules.score_hand cards    
+    # cards = mocked_hand hand, [1,6,9,10,13],[:hearts,:hearts,:hearts,:spades,:hearts]
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,6,9,2,13],[:hearts,:hearts,:hearts,:spades,:hearts]
+    # @rules.score_hand cards
+    
+    #3 of kind
+    # cards = mocked_hand hand, [1,1,1,4,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three aces
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,2,2,4,5],[:hearts,:hearts,:hearts,:spades,:hearts] #three aces
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [2,9,3,9,3],[:hearts,:hearts,:hearts,:spades,:hearts] #full house
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,1,2,9,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three aces
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [1,2,2,9,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three aces
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [5,2,2,9,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three 13's
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [12,2,10,9,13],[:hearts,:hearts,:hearts,:spades,:hearts] #straight    
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [5,2,2,1,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three 1's    
+    # @rules.score_hand cards
+   # cards = mocked_hand hand, [5,2,2,1,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three 1's    
+   # @rules.score_hand cards
+    
+    # cards = mocked_hand hand, [3,3,3,10,11],[:heart,:spade,:club,:heart,:heart] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [3,3,2,10,11],[:heart,:spade,:club,:heart,:heart] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [3,2,2,10,11],[:heart,:spade,:club,:heart,:spade] #royal flush
+    # @rules.score_hand cards
+    
+    cards = mocked_hand hand, [3,4,5,2,10],[:heart,:spade,:club,:heart,:spade] #royal flush
+    @rules.score_hand cards
+   # hand conflicts? - order of testing enough?   
+   
+   # result = @rules.score_hand cards
+    # multiplier = @paytable.return_multiplier result
+    # @credits += @bet*multiplier
+    # @creditsL.setText("Credits: " + @credits.to_s)
   end
 end

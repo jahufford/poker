@@ -74,15 +74,10 @@ class MainWindow < Qt::MainWindow
     game.addAction quit_action
     $statusBar = statusBar()
     statusBar.show
-   # @main_menu = MainMenu.new
-    #@main_menu.connect(SIGNAL('selection(QVariant)'), self, SLOT('construct_game(QVariant)'))
-    # @main_menu.connect(SIGNAL('selection(QVariant)')) do |game|
-      # construct_game game.value
-    # end
-    show_main_menu
-    #setCentralWidget gameboard.view
-    #setCentralWidget @main_menu
-    #resize(gameboard.view.width+100, gameboard.view.height+100)    
+    #show_main_menu
+    @gameboard = Gameboard.new( DeucesWildScoring,DeucesWildPayTable)
+    setCentralWidget @gameboard.view    
+    resize(@gameboard.view.width+100, @gameboard.view.height+100)    
   end
   def show_main_menu    
     @gameboard.view.hide unless @gameboard.nil?
