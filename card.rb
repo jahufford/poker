@@ -13,6 +13,7 @@ class Card < Qt::GraphicsItem
     @height = @front_pixmap.height
     @boundingRect = Qt::RectF.new(0, 0, @width, @height)
     @state = :up
+    @text = ""
   end
   def setMovable move
     setFlag Qt::GraphicsItem::ItemIsMovable, move
@@ -29,10 +30,20 @@ class Card < Qt::GraphicsItem
    #   painter.setBrush Qt::Brush.new(Qt::black,Qt::SolidPattern)
       #painter.fillRect 0,0,@width,@height,Qt::yellow
       painter.drawPath path
+      font = painter.font
+      font.setBold true
+      painter.setFont font
+      painter.drawText 30,@height+20, @text
      # painter.drawText 5,20, "#{@rank.to_s} #{@suit.to_s[0].upcase}"
     else
       painter.drawPixmap 0,0, @back_pixmap
     end
+  end
+  def hold
+    @text = ""
+  end
+  def discard
+    @text = "Discard"
   end
   def resize width, height
     @width, @height = width, height

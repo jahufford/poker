@@ -9,6 +9,7 @@ require './deck.rb'
 
 
 class PayoutBoard < Qt::GraphicsWidget
+  slots 'update_paytable(QVariant)'
   def initialize scene, paytable
     super()
     @scene = scene    
@@ -36,6 +37,12 @@ class PayoutBoard < Qt::GraphicsWidget
     setLayout layout
     resize 300,500
   end
+  def update_paytable new_multipliers
+    hash = new_multipliers.value.value    
+    hash.each_key do |key|
+      @multiplier_labels[key].setPlainText hash[key].to_s
+    end
+  end
   def highlight hand
     if @hand_labels.has_key? hand
       @hand_labels[hand].setDefaultTextColor Qt::Color.new(Qt::red)
@@ -47,7 +54,7 @@ class PayoutBoard < Qt::GraphicsWidget
       @hand_labels[key].setDefaultTextColor Qt::Color.new(Qt::black)
       @multiplier_labels[key].setDefaultTextColor Qt::Color.new(Qt::black)    
     end
-  end
+  end  
 end
 
 class Hand < Qt::GraphicsItem
@@ -122,11 +129,13 @@ class Hand < Qt::GraphicsItem
          @cards[card_index] = nil
          #@discards[card_index].face_down!
          @discards[card_index].moveBy 3, -50
+         @discards[card_index].discard
       else #if clicked card is in discard pile, put back in hold pile
         @cards[card_index] = @discards[card_index]
         @discards[card_index] = nil
         #@cards[card_index].face_up!
         @cards[card_index].moveBy -3,+50
+        @cards[card_index].hold
       end
     end
   end
@@ -253,11 +262,14 @@ class Gameboard < Qt::Object
     @scene.addItem @payout_board
     #@payout_board.setPos @view.width-@payout_board.width-50, 50
     @payout_board.setPos 500,0
-    puts @payout_board.width
+    connect(@paytable, SIGNAL('adjusted(QVariant)'), @payout_board, SLOT('update_paytable(QVariant)'))
     #game = @view.menuBar().addMenu "&Game"
+    @hand_overGTI = @scene.addText "Time to draw a new hand!"
+    @hand_overGTI.setPos 200,form.pos.y+50
   end
   def draw_deal
     if @state == :game_on
+      @payout_board.clear_highlights
       @draw_dealPB.setText("Deal")
       @hand.disable
       num_of_discards = @hand.discards.length
@@ -266,9 +278,10 @@ class Gameboard < Qt::Object
       end
       score_hand @hand
       @return_menuPB.setEnabled true
+      @hand_overGTI.setPlainText("Time to draw a new hand!")
       @state = :game_off
     else
-      @payout_board.clear_highlights
+      @payout_board.clear_highlights      
       @hand.clear
       @hand.enable
       @deck.shuffle
@@ -276,9 +289,14 @@ class Gameboard < Qt::Object
       5.times do 
         @hand.add @deck.deal_card        
       end
+            
       @credits -= @bet
       @creditsL.setText("Credits: " + @credits.to_s)
       @return_menuPB.setEnabled false
+
+      result_of_draw = @rules.score_hand @hand.cards
+      @payout_board.highlight result_of_draw
+      @hand_overGTI.setPlainText("")
       @state = :game_on
     end
   end
@@ -301,7 +319,9 @@ class Gameboard < Qt::Object
     # @rules.score_hand cards
   
    
-    result = @rules.score_hand cards   
+    result = @rules.score_hand cards
+    $statusBar.showMessage(result.to_s,2000)
+    Qt::Application.processEvents   
     multiplier = @paytable.return_multiplier result
     @credits += @bet*multiplier
     @creditsL.setText("Credits: " + @credits.to_s)

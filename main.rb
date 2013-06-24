@@ -74,7 +74,7 @@ class MainWindow < Qt::MainWindow
     # @gameboard = Gameboard.new( DeucesWildScoring,DeucesWildPayTable)
     # setCentralWidget @gameboard.view    
     # resize(@gameboard.view.width+100, @gameboard.view.height+100)
-    resize 500,500    
+    resize 800,600
   end
   def show_main_menu
     @paytable_action.setEnabled false      
@@ -99,6 +99,7 @@ class MainWindow < Qt::MainWindow
       setWindowTitle "PokerGEMZ - Deuces Wild"
     end
     @gameboard = Gameboard.new(rules,paytable)
+    status = statusBar()    
     @paytable_action.setEnabled true    
     connect(@paytable_action,SIGNAL('triggered()'),paytable, SLOT('adjust()'))
     connect(@gameboard,SIGNAL('quit()'),self,SLOT('show_main_menu()'))
