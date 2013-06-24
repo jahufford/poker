@@ -8,6 +8,47 @@ require './deck.rb'
 # end
 
 
+class PayoutBoard < Qt::GraphicsWidget
+  def initialize scene, paytable
+    super()
+    @scene = scene    
+    @paytable = paytable
+    mults = @paytable.multipliers.to_a.sort{|a,b| b[1]<=>a[1]}
+    layout = Qt::GraphicsGridLayout.new self
+    oddsGW = Qt::GraphicsWidget.new self
+    oddsGTI = Qt::GraphicsTextItem.new "Odds of Drawing", oddsGW
+    layout.setColumnMinimumWidth 0,100
+    layout.addItem oddsGW,0,3
+    @hand_labels = Hash.new
+    @multiplier_labels = Hash.new    
+    mults.each_with_index do |item, index|      
+      handGW = Qt::GraphicsWidget.new self
+      handGTI = Qt::GraphicsTextItem.new item[0].to_s, handGW      
+      @hand_labels[item[0]] = handGTI      
+      multiplierGW = Qt::GraphicsWidget.new self
+      multiplierGTI = Qt::GraphicsTextItem.new item[1].to_s, multiplierGW
+      @multiplier_labels[item[0]] = multiplierGTI
+      layout.setRowMaximumHeight index, 20      
+      #child[0].setDefaultTextColor Qt::Color.new (Qt::red)
+      layout.addItem handGW, index+1, 0
+      layout.addItem multiplierGW, index+1, 1
+    end
+    setLayout layout
+    resize 300,500
+  end
+  def highlight hand
+    if @hand_labels.has_key? hand
+      @hand_labels[hand].setDefaultTextColor Qt::Color.new(Qt::red)
+      @multiplier_labels[hand].setDefaultTextColor Qt::Color.new(Qt::red)
+    end
+  end
+  def clear_highlights
+    @hand_labels.each_key do |key|
+      @hand_labels[key].setDefaultTextColor Qt::Color.new(Qt::black)
+      @multiplier_labels[key].setDefaultTextColor Qt::Color.new(Qt::black)    
+    end
+  end
+end
 
 class Hand < Qt::GraphicsItem
   attr_reader :width, :height, :cards
@@ -62,7 +103,7 @@ class Hand < Qt::GraphicsItem
   end
   def card_clicked? pos
     #cards can be in either row, the held or the discard row
-    all_cards = @cards.zip(@discards) # zip them together, each elemetn of this new array will be a 2 element array
+    all_cards = @cards.zip(@discards) # zip them together, each element of this new array will be a 2 element array
                                       # with one element a card from either row, and the other is a nil 
     all_cards.each_with_index do |card,ind|      
       card = (card.compact)[0]
@@ -80,7 +121,7 @@ class Hand < Qt::GraphicsItem
          @discards[card_index] = @cards[card_index]
          @cards[card_index] = nil
          #@discards[card_index].face_down!
-         @discards[card_index].moveBy 3, -50        
+         @discards[card_index].moveBy 3, -50
       else #if clicked card is in discard pile, put back in hold pile
         @cards[card_index] = @discards[card_index]
         @discards[card_index] = nil
@@ -208,6 +249,11 @@ class Gameboard < Qt::Object
     @scene.addItem form
     form.setPos @hand.pos.x, @hand.pos.y+@hand.height
     
+    @payout_board = PayoutBoard.new @scene, @paytable
+    @scene.addItem @payout_board
+    #@payout_board.setPos @view.width-@payout_board.width-50, 50
+    @payout_board.setPos 500,0
+    puts @payout_board.width
     #game = @view.menuBar().addMenu "&Game"
   end
   def draw_deal
@@ -222,6 +268,7 @@ class Gameboard < Qt::Object
       @return_menuPB.setEnabled true
       @state = :game_off
     else
+      @payout_board.clear_highlights
       @hand.clear
       @hand.enable
       @deck.shuffle
@@ -252,111 +299,12 @@ class Gameboard < Qt::Object
     
     # cards = mocked_hand hand, [1,13,12,10,11],[:heart,:heart,:heart,:heart,:heart] #royal flush
     # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,13,2,10,11],[:heart,:heart,:heart,:heart,:heart] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [2,13,12,10,11],[:heart,:heart,:heart,:heart,:heart] #royal flush wrong
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,13,2,2,11],[:heart,:heart,:heart,:heart,:heart] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,13,2,2,2],[:heart,:heart,:heart,:heart,:heart] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [9,13,2,10,11],[:heart,:heart,:heart,:heart,:heart] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [7,3,4,5,6],[:heart,:heart,:heart,:heart,:heart] #straight flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [2,3,4,5,1],[:heart,:heart,:heart,:heart,:heart] #straight flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [2,3,4,5,1],[:heart,:heart,:heart,:heart,:spade] #straight 
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [2,3,4,5,1],[:diamonds,:heart,:heart,:heart,:heart] #straight flush
-    # @rules.score_hand cards
-    
-    #cards = mocked_hand hand, [1,3,4,5,1],[:diamonds,:heart,:heart,:heart,:heart] #straight flush
-    #@rules.score_hand cards
-    #pc cards
-    #straight test
-    # cards = mocked_hand hand, [5,6,7,2,2],[nil,nil,nil,nil,nil] #straight
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [5,7,8,2,2],[nil,nil,nil,nil,nil] #straight
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [5,7,9,2,2],[nil,nil,nil,nil,nil] #straight
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [5,8,9,2,2],[nil,nil,nil,nil,nil] #straight
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [5,7,9,2,2],[nil,nil,nil,nil,nil] #straight
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,2,2,10,13],[nil,nil,nil,nil,nil] #straight
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,2,2,9,13],[nil,nil,nil,nil,nil] #not
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,2,2,4,5],[nil,nil,nil,nil,nil] #straight #broken
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,2,2,4,6],[nil,nil,nil,nil,nil] #not
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,2,2,4,6],[nil,nil,nil,nil,nil] #not
-    # @rules.score_hand cards
-    # pc cards
-    
-    #flush test
-    # cards = mocked_hand hand, [5,7,8,4,5],[:hearts,:hearts,:hearts,:hearts,:hearts]
-    # @rules.score_hand cards    
-    # cards = mocked_hand hand, [1,6,9,10,13],[:hearts,:hearts,:hearts,:spades,:hearts]
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,6,9,2,13],[:hearts,:hearts,:hearts,:spades,:hearts]
-    # @rules.score_hand cards
-    
-    #3 of kind
-    # cards = mocked_hand hand, [1,1,1,4,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three aces
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,2,2,4,5],[:hearts,:hearts,:hearts,:spades,:hearts] #three aces
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [2,9,3,9,3],[:hearts,:hearts,:hearts,:spades,:hearts] #full house
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,1,2,9,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three aces
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,2,2,9,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three aces
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [5,2,2,9,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three 13's
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [12,2,10,9,13],[:hearts,:hearts,:hearts,:spades,:hearts] #straight    
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [5,2,2,1,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three 1's    
-    # @rules.score_hand cards
-   # cards = mocked_hand hand, [5,2,2,1,13],[:hearts,:hearts,:hearts,:spades,:hearts] #three 1's    
-   # @rules.score_hand cards
-    
-    # cards = mocked_hand hand, [3,3,3,10,11],[:heart,:spade,:club,:heart,:heart] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [3,3,2,10,11],[:heart,:spade,:club,:heart,:heart] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [3,2,2,10,11],[:heart,:spade,:club,:heart,:spade] #royal flush
-    # @rules.score_hand cards
-    
-    # cards = mocked_hand hand, [10,11,12,13,1],[:heart,:heart,:heart,:heart,:heart] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [2,11,12,13,1],[:heart,:heart,:heart,:heart,:heart] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [10,11,12,13,2],[:heart,:heart,:heart,:heart,:heart] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [10,11,12,2,2],[:heart,:heart,:heart,:heart,:heart] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [10,11,2,2,2],[:heart,:heart,:heart,:spade,:club] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [10,2,2,2,2],[:heart,:diamond,:heart,:spade,:club] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [10,1,2,2,2],[:heart,:diamond,:heart,:spade,:club] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,1,2,2,2],[:heart,:diamond,:heart,:spade,:club] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,1,1,2,2],[:heart,:diamond,:club,:spade,:club] #royal flush
-    # @rules.score_hand cards
-    # cards = mocked_hand hand, [1,1,1,2,1],[:heart,:diamond,:club,:spade,:spade] #royal flush
-    # @rules.score_hand cards
-   # hand conflicts? - order of testing enough?   
+  
    
     result = @rules.score_hand cards   
     multiplier = @paytable.return_multiplier result
     @credits += @bet*multiplier
     @creditsL.setText("Credits: " + @credits.to_s)
+    @payout_board.highlight result
   end
 end

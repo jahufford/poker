@@ -66,14 +66,15 @@ class MainWindow < Qt::MainWindow
   def initialize
     super
     setWindowTitle "PokerGEMZ"
-    #gameboard = Gameboard.new    
+    #gameboard = Gameboard.new 
     setup_menubar    
     $statusBar = statusBar()
     statusBar.show
     show_main_menu
     # @gameboard = Gameboard.new( DeucesWildScoring,DeucesWildPayTable)
     # setCentralWidget @gameboard.view    
-    # resize(@gameboard.view.width+100, @gameboard.view.height+100)    
+    # resize(@gameboard.view.width+100, @gameboard.view.height+100)
+    resize 500,500    
   end
   def show_main_menu
     @paytable_action.setEnabled false      
@@ -101,6 +102,7 @@ class MainWindow < Qt::MainWindow
     @paytable_action.setEnabled true    
     connect(@paytable_action,SIGNAL('triggered()'),paytable, SLOT('adjust()'))
     connect(@gameboard,SIGNAL('quit()'),self,SLOT('show_main_menu()'))
+    
     resize(@gameboard.view.width+100, @gameboard.view.height+100)    
     setCentralWidget @gameboard.view
   end
@@ -121,9 +123,14 @@ class MainWindow < Qt::MainWindow
  
     options = menuBar().addMenu "&Options"
     @paytable_action = Qt::Action.new "Adjust &Paytable", self
+    discard_style_action = Qt::Action.new "Discard Style", self
+    discard_style_action.connect(SIGNAL :triggered) do
+      
+    end
     
     options.addAction @paytable_action
-    @paytable_action.setEnabled false   
+    options.addAction discard_style_action    
+    @paytable_action.setEnabled false
     
     about = menuBar().addMenu "&About"
     about_action = Qt::Action.new "&About", self
@@ -148,6 +155,8 @@ class MainWindow < Qt::MainWindow
       return
     end      
     lines = version_info.lines.to_a
+    lines.map!{|line| line.chomp}
+    lines = lines.reject{|line| line.empty?}
     version = lines.shift.split('=')[1]        
     if version.to_i > $VERSION      
       msg_box = Qt::MessageBox.new
@@ -163,11 +172,20 @@ class MainWindow < Qt::MainWindow
           lines.each do |line|
             statusBar().showMessage("Downloading #{line}",2000)
             Qt::Application.processEvents
-            file_contents = open("https://sites.google.com/site/jahufford/poker/#{line}").read
-            puts file_contents
+            file_contents = open("https://sites.google.com/site/jahufford/poker/#{line}").read            
             File.open("#{line}.new","w") {|file| file.write file_contents }
           end
-        rescue
+          statusBar().showMessage("Files downloaded. Updating local system")
+          Qt::Application.processEvents
+          lines.each do |line|
+            puts "Attemping to delete #{line}"                       
+            File.delete(line)
+            puts "Attemping to rename #{line}.new to #{line}"
+            File.rename("#{line}.new",line)            
+          end          
+          Qt::MessageBox.information(self, "", "Finished Updating. Please restart program.")
+        rescue => e
+          puts e.message
           Qt::MessageBox.information(self, "Error","Couldn't finish update.")
         end
       else

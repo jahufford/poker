@@ -2,7 +2,7 @@ require 'Qt.rb'
 
 class Card < Qt::GraphicsItem
   attr_reader :width, :height
-  attr_accessor :suit, :rank
+  attr_accessor :suit, :rank, :front_pixmap, :back_pixmap
   def initialize rank, suit, front_pixmap, back_pixmap
     super nil   
     @rank = rank
@@ -12,7 +12,7 @@ class Card < Qt::GraphicsItem
     @width = @front_pixmap.width
     @height = @front_pixmap.height
     @boundingRect = Qt::RectF.new(0, 0, @width, @height)
-    @state = :up    
+    @state = :up
   end
   def setMovable move
     setFlag Qt::GraphicsItem::ItemIsMovable, move
