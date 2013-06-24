@@ -2,6 +2,10 @@ require 'Qt'
 require './gameboard.rb'
 require './rules.rb'
 require './paytables.rb'
+require 'net/http'
+require 'uri'
+
+$VERSION = 1
 
 class RubyVariant < Qt::Variant
   # all these shenanigans is necessary to be able to emit
@@ -62,7 +66,7 @@ class MainWindow < Qt::MainWindow
   def initialize
     super
     setWindowTitle "PokerGEMZ"
-    #gameboard = Gameboard.new
+    #gameboard = Gameboard.new    
     setup_menubar    
     $statusBar = statusBar()
     statusBar.show
@@ -121,9 +125,56 @@ class MainWindow < Qt::MainWindow
     options.addAction @paytable_action
     @paytable_action.setEnabled false   
     
-    about = menuBar().addAction "&About"
-    about.connect(SIGNAL :triggered) do      
+    about = menuBar().addMenu "&About"
+    about_action = Qt::Action.new "&About", self
+    about_action.connect(SIGNAL :triggered) do      
       Qt::MessageBox.information( self, "About","PokerGEMZ. By Joe Hufford. 2013")
+    end
+    check_updates_action = Qt::Action.new "Check for &Updates", self
+    check_updates_action.connect(SIGNAL :triggered) do      
+      check_for_updates
+    end
+    about.addAction check_updates_action
+    about.addAction about_action
+  end
+  def check_for_updates
+    statusBar().showMessage("Checking for updates",2000)    
+    Qt::Application.processEvents()    
+    require 'open-uri'  
+    begin
+      version_info = open('https://sites.google.com/site/jahufford/poker/version.txt').read
+    rescue
+      Qt::MessageBox.information(self, "Error","Couldn't find version.txt file. Internet connection bad?")
+      return
+    end      
+    lines = version_info.lines.to_a
+    version = lines.shift.split('=')[1]        
+    if version.to_i > $VERSION      
+      msg_box = Qt::MessageBox.new
+      msg_box.setWindowTitle "Version"
+      msg_box.setText "Newest version is #{version.to_s} and your version is #{$VERSION.to_s}. Perform update?"
+      msg_box.addButton Qt::MessageBox::No
+      msg_box.addButton Qt::MessageBox::Yes
+      response = msg_box.exec
+      if response == Qt::MessageBox::Yes
+        statusBar().showMessage("Updating",1000)
+        Qt::Application.processEvents
+        begin          
+          lines.each do |line|
+            statusBar().showMessage("Downloading #{line}",2000)
+            Qt::Application.processEvents
+            file_contents = open("https://sites.google.com/site/jahufford/poker/#{line}").read
+            puts file_contents
+            File.open("#{line}.new","w") {|file| file.write file_contents }
+          end
+        rescue
+          Qt::MessageBox.information(self, "Error","Couldn't finish update.")
+        end
+      else
+        puts "Proceeding with old version"
+      end
+    else
+      Qt::MessageBox.information(self, "","You're up to date!")
     end
   end
 end

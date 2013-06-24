@@ -32,7 +32,7 @@ class Deck < Qt::GraphicsItem
     #the image map is 6 row, first row is the row of card of hearts, then spades, diamonds,clubs
     # then 2 jokers
     # and finally 5 card backs
-    image_map = Qt::Pixmap.new "card_map.png"
+    image_map = Qt::Pixmap.new "card_map1.png"
     @card_width = image_map.width/13
     @card_height = image_map.height/6
     @card_fronts = []
