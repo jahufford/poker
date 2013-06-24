@@ -280,11 +280,6 @@ class DeucesWildScoring
       true
     end
     def three_of_kind? cards
-#      sorted = cards.sort{|a,b| a.rank<=>b.rank}
-      # if sorted[0].rank ==1
-        # sorted[0] = sorted[0].dup
-        # sorted[0].rank = 14
-      # end
       sets = find_sets(cards)
       if sets.length == 1 # set would only be a one, since a full house would be picked up earlier
         if sets[0][0] == 3      

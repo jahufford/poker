@@ -168,6 +168,7 @@ class Gameboard < Qt::Object
     end
     @credits = 500
     @creditsL = Qt::Label.new ("Credits: " + @credits.to_s)
+    @creditsL.setMinimumWidth 130
     #@creditsL.setAlignment(Qt::AlignRight)
     @creditsLGW = @scene.addWidget(@creditsL)
     
@@ -353,8 +354,7 @@ class Gameboard < Qt::Object
     # @rules.score_hand cards
    # hand conflicts? - order of testing enough?   
    
-    result = @rules.score_hand cards
-   # puts @paytable
+    result = @rules.score_hand cards   
     multiplier = @paytable.return_multiplier result
     @credits += @bet*multiplier
     @creditsL.setText("Credits: " + @credits.to_s)

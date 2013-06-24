@@ -9,18 +9,23 @@ class RubyVariant < Qt::Variant
   # a QVariant, but the built in ruby hash won't work with this, it needs
   # to be wrapped inside another class  
   def initialize value
-    super()
+    super()    
     @value = value
   end
   def value
     @value
   end
-  # class MyHash
-    # attr_accessor :value
-    # def initialize value
-      # @value = value
-    # end
-  # end
+  class MyHash
+    attr_accessor :value
+    def initialize value
+      @value = value
+    end
+  end
+end
+class Hash
+  def to_variant
+    RubyVariant.new RubyVariant::MyHash.new(self)
+  end
 end
 
 class OptionsDialog < Qt::Dialog
@@ -66,7 +71,8 @@ class MainWindow < Qt::MainWindow
     # setCentralWidget @gameboard.view    
     # resize(@gameboard.view.width+100, @gameboard.view.height+100)    
   end
-  def show_main_menu    
+  def show_main_menu
+    @paytable_action.setEnabled false      
     @gameboard.view.hide unless @gameboard.nil?
     @main_menu = MainMenu.new 
     @main_menu.connect(SIGNAL('selection(QVariant)')) do |game|
@@ -91,7 +97,6 @@ class MainWindow < Qt::MainWindow
     @paytable_action.setEnabled true    
     connect(@paytable_action,SIGNAL('triggered()'),paytable, SLOT('adjust()'))
     connect(@gameboard,SIGNAL('quit()'),self,SLOT('show_main_menu()'))
-   # @gameboard.connect(SIGNAL('quit()'), self, SLOT('show_main_menu()'))
     resize(@gameboard.view.width+100, @gameboard.view.height+100)    
     setCentralWidget @gameboard.view
   end
@@ -115,7 +120,11 @@ class MainWindow < Qt::MainWindow
     
     options.addAction @paytable_action
     @paytable_action.setEnabled false   
-        
+    
+    about = menuBar().addAction "&About"
+    about.connect(SIGNAL :triggered) do      
+      Qt::MessageBox.information( self, "About","PokerGEMZ. By Joe Hufford. 2013")
+    end
   end
 end
 
