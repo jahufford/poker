@@ -17,8 +17,8 @@ class PaytableAnalyzer < Qt::Widget
     proposed_hand_layout.addStretch
     @proposed_hand = []
     5.times do
-      card = Qt::Label.new
-      card.setPixmap @card_back
+      card = Card.new nil,nil,nil,@card_back
+      #card.setPixmap @card_back
       @proposed_hand << card
       proposed_hand_layout.addWidget card
     end
@@ -84,10 +84,14 @@ class PaytableAnalyzer < Qt::Widget
       @suit = suit
       @card_front = card_front
       @card_back = card_back
-      @width = card_front.width
-      @height = card_front.height
+      @width = card_back.width
+      @height = card_back.height
       @state = :up
-      setPixmap @card_front
+      if card_front.nil?
+        setPixmap @card_back
+      else
+        setPixmap @card_front
+      end
     end
     def up?
       @state == :up
