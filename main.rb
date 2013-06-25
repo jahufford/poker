@@ -2,6 +2,7 @@ require 'Qt'
 require './gameboard.rb'
 require './rules.rb'
 require './paytables.rb'
+require './paytable_analyzer.rb'
 require 'net/http'
 require 'uri'
 
@@ -42,21 +43,53 @@ end
 class MainMenu < Qt::Widget  
   signals 'selection(QVariant)'
   def initialize
-    super    
-    jacks_or_betterPB = Qt::PushButton.new "Jacks or Better"
-    jacks_or_betterPB.connect(SIGNAL :clicked) do
-      emit selection(RubyVariant.new("jacks_or_better"))
+    super
+    buttons = Array.new
+    ["Jacks or Better","Deuces Wild", "Joker Poker"].each do |elem|
+      gamePB = Qt::PushButton.new elem
+      gamePB.connect(SIGNAL :clicked) do
+        emit selection(RubyVariant.new(elem))
+      end
+      analyzePB = Qt::PushButton.new "Analyze Paytable"
+      analyzePB.connect(SIGNAL :clicked) do
+        emit selection(RubyVariant.new("analyze paytable "+elem))
+      end
+      buttons << [gamePB,analyzePB]
     end
-    deuces_wildPB = Qt::PushButton.new "Deuces Wild"
-    deuces_wildPB.connect(SIGNAL :clicked) do
-      emit selection(RubyVariant.new("deuces_wild"))
-    end
+    # jacks_or_betterPB = Qt::PushButton.new "Jacks or Better"
+    # jacks_or_betterPB.connect(SIGNAL :clicked) do
+      # emit selection(RubyVariant.new("jacks_or_better"))
+    # end
+    # analyze_pt_jacksPB = Qt::PushButton.new "Analyze Paytable"
+    # analyze_pt_jacksPB.connect(SIGNAL :clicked) do
+      # emit selection(RubyVariant.new("analyze_pt_jacks_or_better"))
+    # end
+    # deuces_wildPB = Qt::PushButton.new "Deuces Wild"
+    # deuces_wildPB.connect(SIGNAL :clicked) do
+      # emit selection(RubyVariant.new("deuces_wild"))
+    # end
+    # analyze_pt_deucesPB = Qt::PushButton.new "Analyze Paytable"
+    # analyze_pt_deucesPB.connect(SIGNAL :clicked) do
+      # emit selection(RubyVariant.new("analyze_pt_deuces_wild"))
+    # end
     layout = Qt::VBoxLayout.new do
-      addStretch
-      addWidget jacks_or_betterPB    
-      addWidget deuces_wildPB
-      addStretch
+       addStretch
+       buttons.each do |elem|
+         l = Qt::GridLayout.new do
+          addWidget elem[0],0,0
+          addWidget elem[1],0,1
+         end
+         addLayout l
+       end
+       #addWidget jacks_or_betterPB    
+       #addWidget deuces_wildPB
+       addStretch
     end
+    # layout = Qt::GridLayout.new do
+      # addWidget jacks_or_betterPB, 0, 0
+      # addWidget analyze_pt_jacksPB, 0, 1
+      # addWidget deuces_wildPB, 1,0
+    # end
     setLayout layout
   end  
 end
@@ -88,24 +121,36 @@ class MainWindow < Qt::MainWindow
     #@main_menu.resize(@gameboard.view.width, @gameboard.view.height)
   end
   def construct_game game
-    case game
-    when "jacks_or_better"
+    case game.downcase
+    when "jacks or better"
       rules = JacksOrBetterScoring
       paytable = JacksOrBetterPayTable.new
       setWindowTitle "PokerGEMZ - Jacks or Better"
-    when "deuces_wild"
+    when "deuces wild"
       rules = DeucesWildScoring
       paytable = DeucesWildPayTable.new
       setWindowTitle "PokerGEMZ - Deuces Wild"
+    when "analyze paytable jacks or better"
+      rules = JacksOrBetterScoring
+      paytable = JacksOrBetterPayTable.new
+      setWindowTitle "PokerGEMZ - Paytable Analyzer - Jacks or Better"
+    else
+      puts game
+      Qt::MessageBox.warning self, "Oops", "Not implemented yet"      
+      return
     end
-    @gameboard = Gameboard.new(rules,paytable)
-    status = statusBar()    
-    @paytable_action.setEnabled true    
-    connect(@paytable_action,SIGNAL('triggered()'),paytable, SLOT('adjust()'))
-    connect(@gameboard,SIGNAL('quit()'),self,SLOT('show_main_menu()'))
-    
-    resize(@gameboard.view.width+100, @gameboard.view.height+100)    
-    setCentralWidget @gameboard.view
+    if game.start_with? "analyze"
+      setCentralWidget PaytableAnalyzer.new rules, paytable
+    else
+      @gameboard = Gameboard.new(rules,paytable)
+      status = statusBar()    
+      @paytable_action.setEnabled true    
+      connect(@paytable_action,SIGNAL('triggered()'),paytable, SLOT('adjust()'))
+      connect(@gameboard,SIGNAL('quit()'),self,SLOT('show_main_menu()'))
+      
+      resize(@gameboard.view.width+100, @gameboard.view.height+100)    
+      setCentralWidget @gameboard.view
+    end    
   end
   def setup_menubar
     game = menuBar().addMenu "&Game"

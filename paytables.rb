@@ -1,5 +1,6 @@
 class BasePaytable < Qt::Object
   slots 'adjust()'
+  signals 'adjusted(QVariant)'
   attr_accessor :multipliers
   def initialize
     super
@@ -9,7 +10,8 @@ class BasePaytable < Qt::Object
     dialog = PaytableDialog.new nil, @multipliers
     ret = dialog.exec
     if ret == 1
-      @multipliers = dialog.new_multipliers      
+      @multipliers = dialog.new_multipliers
+      emit adjusted(@multipliers.to_variant)
     end
   end
 end
