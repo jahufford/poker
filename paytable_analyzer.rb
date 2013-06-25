@@ -5,13 +5,26 @@ class PaytableAnalyzer < Qt::Widget
     @paytable = paytable
     multipliers = @paytable.multipliers.to_a
     multipliers.sort! {|a,b| b[1]<=>a[1] }    
-    top_grid = Qt::GridLayout.new
+    paytable_grid = Qt::GridLayout.new
     multipliers.each_with_index do |elem,ind|
       label = Qt::Label.new elem[0].to_s
       edit = Qt::LineEdit.new elem[1].to_s
-      top_grid.addWidget label, ind, 0
-      top_grid.addWidget edit, ind, 1
+      edit.setMinimumWidth 50
+      paytable_grid.addWidget label, ind, 0
+      paytable_grid.addWidget edit, ind, 1
     end
+    odds_grid = Qt::GridLayout.new do
+      headers = ["Return","Keep","Nothing"]
+      multipliers.each do |key|
+        headers << key.to_s
+      end
+      headers.each_with_index do |header,ind|
+        label = Qt::Label.new header
+        addWidget label,0,ind
+      end      
+    end
+    
+    
     load_card_pix
     proposed_hand_layout = Qt::HBoxLayout.new
     proposed_hand_layout.addStretch
@@ -36,25 +49,60 @@ class PaytableAnalyzer < Qt::Widget
     card_grid.setVerticalSpacing 1
     card_grid.setHorizontalSpacing 1
     card_grid.setSizeConstraint Qt::Layout::SetFixedSize
-    
-    vert_layout = Qt::VBoxLayout.new do
-      addLayout top_grid
-      addLayout proposed_hand_layout
+    card_horiz = Qt::HBoxLayout.new do
+      addStretch
       addLayout card_grid
+      addStretch
+    end    
+    top_horiz = Qt::HBoxLayout.new
+    top_horiz.addLayout paytable_grid
+    top_horiz.addLayout odds_grid
+    vert_layout = Qt::VBoxLayout.new do
+      addLayout top_horiz
+      addLayout proposed_hand_layout
+      addLayout card_horiz
     end
     setLayout vert_layout
   end
-  def card_clicked? pos
+  def deck_card_clicked? pos
     @cards.each_with_index do |card,index|
       if (pos.x>card.pos.x) and (pos.x < (card.pos.x+card.width)) and (pos.y>card.pos.y) and (pos.y<(card.pos.y + card.height))
-        if card.up?
-          card.down!
+        if card.up?          
+          return index
         end
       end
-    end
-  end  
+    end    
+    false
+  end
+  def proposed_hand_card_clicked? pos
+    @proposed_hand.each_with_index do |card,index|
+      if (pos.x>card.pos.x) and (pos.x < (card.pos.x+card.width)) and (pos.y>card.pos.y) and (pos.y<(card.pos.y + card.height))
+        if card.up?          
+          return index
+        end
+      end
+    end    
+    false
+  end
   def mousePressEvent pos
-    card_clicked? pos
+    card_ind = deck_card_clicked?(pos)
+    if card_ind
+      if @cards[card_ind].up? 
+        index = @proposed_hand.find_index{|item| item.rank.nil?}      
+        @proposed_hand[index].set(@cards[card_ind])
+        @cards[card_ind].down!
+      end
+    else
+    end
+    card_ind = proposed_hand_card_clicked?(pos)
+    if card_ind
+      card = @proposed_hand[card_ind]
+      if not card.nil_card?
+        cards_index = @cards.find_index{|item| item.rank==card.rank and item.suit==card.suit}
+        card.clear
+        @cards[cards_index].up!
+      end
+    end
   end
   def load_card_pix    
     #the image map is 6 row, first row is the row of card of hearts, then spades, diamonds,clubs
@@ -113,6 +161,20 @@ class PaytableAnalyzer < Qt::Widget
       else
         setPixmap @card_front
       end
+    end
+    def set card
+      @rank = card.rank
+      @suit = card.suit
+      @card_front = card.card_front
+      setPixmap @card_front      
+    end
+    def clear
+      @rank = nil
+      @suit = nil
+      setPixmap @card_back      
+    end
+    def nil_card?
+      @rank.nil?
     end
   end
 
