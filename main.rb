@@ -140,7 +140,8 @@ class MainWindow < Qt::MainWindow
       return
     end
     if game.start_with? "analyze"
-      setCentralWidget PaytableAnalyzer.new rules, paytable
+      PaytableAnalyzer.new(rules,paytable).exec
+      #setCentralWidget PaytableAnalyzer.new rules, paytable
     else
       @gameboard = Gameboard.new(rules,paytable)
       status = statusBar()    

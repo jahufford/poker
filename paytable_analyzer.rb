@@ -1,4 +1,4 @@
-class PaytableAnalyzer < Qt::Widget
+class PaytableAnalyzer < Qt::Dialog
   def initialize rules, paytable
     super nil 
     @rules = rules
@@ -8,22 +8,33 @@ class PaytableAnalyzer < Qt::Widget
     paytable_grid = Qt::GridLayout.new
     multipliers.each_with_index do |elem,ind|
       label = Qt::Label.new elem[0].to_s
+      label.setFixedWidth 100
+      #label.setMinimumWidth 50
+      #label.setMaximumWidth 100
       edit = Qt::LineEdit.new elem[1].to_s
-      edit.setMinimumWidth 50
+      #edit.setMinimumWidth 50
+      edit.setFixedWidth 50
+      #edit.setMaximumWidth 100
       paytable_grid.addWidget label, ind, 0
       paytable_grid.addWidget edit, ind, 1
     end
-    odds_grid = Qt::GridLayout.new do
-      headers = ["Return","Keep","Nothing"]
-      multipliers.each do |key|
-        headers << key.to_s
-      end
-      headers.each_with_index do |header,ind|
-        label = Qt::Label.new header
-        addWidget label,0,ind
-      end      
+    paytable_grid.setSizeConstraint Qt::Layout::SetMaximumSize
+    odds_table = Qt::TableWidget.new 32, multipliers.length+4, self
+    headers = ["Return","Hold","Total","Nothing"]
+    multipliers.each do |item|
+      headers << item[0].to_s
     end
-    
+    odds_table.setHorizontalHeaderLabels(headers)
+    # odds_grid = Qt::GridLayout.new do
+      # headers = ["Return","Hold","Total","Nothing"]
+      # multipliers.each do |key|
+        # headers << key.to_s
+      # end
+      # headers.each_with_index do |header,ind|
+        # label = Qt::Label.new header
+        # addWidget label,0,ind
+      # end      
+    # end
     
     load_card_pix
     proposed_hand_layout = Qt::HBoxLayout.new
@@ -54,11 +65,15 @@ class PaytableAnalyzer < Qt::Widget
       addLayout card_grid
       addStretch
     end    
-    top_horiz = Qt::HBoxLayout.new
-    top_horiz.addLayout paytable_grid
-    top_horiz.addLayout odds_grid
+    # top_horiz = Qt::HBoxLayout.new
+    # top_horiz.addLayout paytable_grid
+    # top_horiz.addWidget odds_table
+    top_grid = Qt::GridLayout.new do
+      addLayout paytable_grid,0,0
+      addWidget odds_table,0,1
+    end    
     vert_layout = Qt::VBoxLayout.new do
-      addLayout top_horiz
+      addLayout top_grid
       addLayout proposed_hand_layout
       addLayout card_horiz
     end
