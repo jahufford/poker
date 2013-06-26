@@ -1,3 +1,17 @@
+# def combo array, n
+  # combs = []
+  # (0...(array.length-n+1)
+# end
+# 
+# nums = [1,2,3,4,5]
+# combinations = [[],nums]
+# nums.each {|num| combinations << [num]}
+# nums[0...(nums.length-1)].each_with_index do |num,ind|
+  # nums[(ind+1)...(nums.length)].each do |inside|
+    # combinations << [num,inside]
+  # end  
+# end
+
 require 'Qt'
 require './gameboard.rb'
 require './rules.rb'

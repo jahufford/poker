@@ -25,6 +25,17 @@ class PaytableAnalyzer < Qt::Dialog
       headers << item[0].to_s
     end
     odds_table.setHorizontalHeaderLabels(headers)
+    nums = [1,2,3,4,5]
+    @combinations = []
+    (0..5).each do |num|
+      nums.combination(num).to_a.each do |item|
+        @combinations << item
+      end
+    end
+    @combinations.each_with_index do |item,ind|
+      widge = Qt::TableWidgetItem.new item.to_s
+      odds_table.setItem ind, 1, widge
+    end
     # odds_grid = Qt::GridLayout.new do
       # headers = ["Return","Hold","Total","Nothing"]
       # multipliers.each do |key|
@@ -79,6 +90,9 @@ class PaytableAnalyzer < Qt::Dialog
     end
     setLayout vert_layout
   end
+  def calculate_odds
+    
+  end
   def deck_card_clicked? pos
     @cards.each_with_index do |card,index|
       if (pos.x>card.pos.x) and (pos.x < (card.pos.x+card.width)) and (pos.y>card.pos.y) and (pos.y<(card.pos.y + card.height))
@@ -105,6 +119,9 @@ class PaytableAnalyzer < Qt::Dialog
       if @cards[card_ind].up? 
         index = @proposed_hand.find_index{|item| item.rank.nil?}      
         @proposed_hand[index].set(@cards[card_ind])
+        if @proposed_hand.find_index{|card| card.nil_card?}.nil?
+          calculate_odds
+        end
         @cards[card_ind].down!
       end
     else
@@ -155,6 +172,13 @@ class PaytableAnalyzer < Qt::Dialog
       else
         setPixmap @card_front
       end
+    end
+    def rank_s
+      return @rank.to_s if @rank>=2 and @rank<=10
+      return "A" if @rank==1
+      return "J" if @rank==11
+      return "Q" if @rank==12
+      return "K" if @rank==13
     end
     def up?
       @state == :up
