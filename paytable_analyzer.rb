@@ -19,33 +19,19 @@ class PaytableAnalyzer < Qt::Dialog
       paytable_grid.addWidget edit, ind, 1
     end
     paytable_grid.setSizeConstraint Qt::Layout::SetMaximumSize
-    odds_table = Qt::TableWidget.new 32, multipliers.length+4, self
+    @odds_table = Qt::TableWidget.new 32, multipliers.length+4, self
     headers = ["Return","Hold","Total","Nothing"]
     multipliers.each do |item|
       headers << item[0].to_s
     end
-    odds_table.setHorizontalHeaderLabels(headers)
-    nums = [1,2,3,4,5]
+    @odds_table.setHorizontalHeaderLabels(headers)
+    nums = [0,1,2,3,4]
     @combinations = []
     (0..5).each do |num|
       nums.combination(num).to_a.each do |item|
         @combinations << item
       end
     end
-    @combinations.each_with_index do |item,ind|
-      widge = Qt::TableWidgetItem.new item.to_s
-      odds_table.setItem ind, 1, widge
-    end
-    # odds_grid = Qt::GridLayout.new do
-      # headers = ["Return","Hold","Total","Nothing"]
-      # multipliers.each do |key|
-        # headers << key.to_s
-      # end
-      # headers.each_with_index do |header,ind|
-        # label = Qt::Label.new header
-        # addWidget label,0,ind
-      # end      
-    # end
     
     load_card_pix
     proposed_hand_layout = Qt::HBoxLayout.new
@@ -76,13 +62,10 @@ class PaytableAnalyzer < Qt::Dialog
       addLayout card_grid
       addStretch
     end    
-    # top_horiz = Qt::HBoxLayout.new
-    # top_horiz.addLayout paytable_grid
-    # top_horiz.addWidget odds_table
-    top_grid = Qt::GridLayout.new do
-      addLayout paytable_grid,0,0
-      addWidget odds_table,0,1
-    end    
+    top_grid = Qt::GridLayout.new
+    top_grid.addLayout paytable_grid,0,0
+    top_grid.addWidget @odds_table,0,1
+    
     vert_layout = Qt::VBoxLayout.new do
       addLayout top_grid
       addLayout proposed_hand_layout
@@ -91,7 +74,19 @@ class PaytableAnalyzer < Qt::Dialog
     setLayout vert_layout
   end
   def calculate_odds
-    
+    @combinations.each_with_index do |item,ind|
+      # item is the indexes of cards to hold
+      str = ""
+      scnt = 0
+      item.sort.each do |i| #items are indexes into the hand ie [1,3] means @proposed_hand[1] and @proposed_hand[3] are held, the rest are discard
+        (i-scnt).times{str+='_'}
+        scnt = i+1
+        str += @proposed_hand[i].rank_s
+      end
+      (5-scnt).times{str+='_'}
+      widge = Qt::TableWidgetItem.new str
+      @odds_table.setItem ind, 1, widge      
+    end       
   end
   def deck_card_clicked? pos
     @cards.each_with_index do |card,index|
@@ -116,7 +111,7 @@ class PaytableAnalyzer < Qt::Dialog
   def mousePressEvent pos
     card_ind = deck_card_clicked?(pos)
     if card_ind
-      if @cards[card_ind].up? 
+      if @cards[card_ind].up? and not @proposed_hand.find_index{|card| card.nil_card?}.nil?
         index = @proposed_hand.find_index{|item| item.rank.nil?}      
         @proposed_hand[index].set(@cards[card_ind])
         if @proposed_hand.find_index{|card| card.nil_card?}.nil?
