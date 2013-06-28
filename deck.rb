@@ -49,7 +49,6 @@ class Deck < Qt::GraphicsItem
     end
     @card_back = card_backs[3]    
   end
-  
   def shuffle
     @order = (0...52).to_a.shuffle
     @index = 0

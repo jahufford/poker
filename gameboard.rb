@@ -96,7 +96,8 @@ class Hand < Qt::GraphicsItem
     new_ind = @cards.index(nil)            
     card.setParentItem self
     card.setPos(@boundary + new_ind*(card.width+@space_between_cards), @top_boundary)
-    card.face_up!    
+    #card.face_up!
+    card.face_down!    
     @cards[new_ind] = card    
     @boundingRect.setWidth(@width)
   end
@@ -128,33 +129,30 @@ class Hand < Qt::GraphicsItem
     if card_index and @mouse_pressed and not @in_card
       @in_card = true
       @last_card_index = card_index
-      change_card_state card_index      
-      puts "entered card"
+      change_card_state card_index            
     elsif card_index and @mouse_pressed and @in_card
       if card_index != @last_card_index
         change_card_state card_index
         @last_card_index = card_index
-      end
-      puts "moving inside a card"
+      end      
     elsif not card_index and @in_card
       @in_card = false
-      @last_card_index = nil
-      puts "left card"
+      @last_card_index = nil      
     end
   end
   def change_card_state card_index
     if @cards[card_index] #if clicked card in @cards, put in discard pile and move up        
          @discards[card_index] = @cards[card_index]
          @cards[card_index] = nil
-         @discards[card_index].face_down!
-         #@discards[card_index].moveBy 3, -50
-         #@discards[card_index].discard
+         #@discards[card_index].face_down!
+         @discards[card_index].moveBy 3, -50
+         @discards[card_index].discard
       else #if clicked card is in discard pile, put back in hold pile
         @cards[card_index] = @discards[card_index]
         @discards[card_index] = nil
-        @cards[card_index].face_up!
-        #@cards[card_index].moveBy -3,+50
-        #@cards[card_index].hold
+        #@cards[card_index].face_up!
+        @cards[card_index].moveBy -3,+50
+        @cards[card_index].hold
       end
   end
   def mousePressEvent event
@@ -300,15 +298,29 @@ class Gameboard < Qt::Object
     @hand_overGTI = @scene.addText "Time to draw a new hand!"
     @hand_overGTI.setPos 200,form.pos.y+50
   end
+  def delay_ms ms
+    delay = Qt::Time.currentTime.addMSecs(ms)
+      while Qt::Time.currentTime < delay do
+        Qt::Application.processEvents
+    end
+  end  
   def draw_deal
     if @state == :game_on
       @payout_board.clear_highlights
       @draw_dealPB.setText("Deal")
       @hand.disable
       num_of_discards = @hand.discards.length
+      dealt_cards = []
       num_of_discards.times do
-        @hand.add @deck.deal_card
+        card = @deck.deal_card
+        dealt_cards << card
+        @hand.add card        
       end
+      dealt_cards.each do |card|
+        delay_ms 25
+        card.face_up!
+      end
+      
       score_hand @hand
       @return_menuPB.setEnabled true
       @hand_overGTI.setPlainText("Time to draw a new hand!")
@@ -320,9 +332,14 @@ class Gameboard < Qt::Object
       @deck.shuffle
       @draw_dealPB.setText("Draw")
       5.times do 
-        @hand.add @deck.deal_card        
+        @hand.add @deck.deal_card
+        delay_ms 25
       end
-            
+      #delay_ms 100
+      @hand.cards.each do |card|
+        card.face_up!
+        delay_ms 25
+      end 
       @credits -= @bet
       @creditsL.setText("Credits: " + @credits.to_s)
       @return_menuPB.setEnabled false
