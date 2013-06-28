@@ -70,6 +70,9 @@ class Hand < Qt::GraphicsItem
     @boundingRect = Qt::RectF.new(0,0,@boundary*2,@boundary+@top_boundary+200)
     @width = @boundary*2 + 4*@space_between_cards + 5*card_width 
     @height = @boundary + @top_boundary + card_height
+    @mouse_pressed = false
+    @in_card = false
+    @last_card_index = nil
   end
   def enable
     @enabled = true
@@ -120,25 +123,54 @@ class Hand < Qt::GraphicsItem
     end
     false
   end
-  def mousePressEvent event
-    return if not @enabled
-    card_index = card_clicked? event.pos #returns index of card, or false otherwise    
-    if card_index
-      if @cards[card_index] #if clicked card in @cards, put in discard pile and move up        
+  def mouseMoveEvent event
+    card_index = card_clicked? event.pos #returns index of card, or false otherwise
+    if card_index and @mouse_pressed and not @in_card
+      @in_card = true
+      @last_card_index = card_index
+      change_card_state card_index      
+      puts "entered card"
+    elsif card_index and @mouse_pressed and @in_card
+      if card_index != @last_card_index
+        change_card_state card_index
+        @last_card_index = card_index
+      end
+      puts "moving inside a card"
+    elsif not card_index and @in_card
+      @in_card = false
+      @last_card_index = nil
+      puts "left card"
+    end
+  end
+  def change_card_state card_index
+    if @cards[card_index] #if clicked card in @cards, put in discard pile and move up        
          @discards[card_index] = @cards[card_index]
          @cards[card_index] = nil
-         #@discards[card_index].face_down!
-         @discards[card_index].moveBy 3, -50
-         @discards[card_index].discard
+         @discards[card_index].face_down!
+         #@discards[card_index].moveBy 3, -50
+         #@discards[card_index].discard
       else #if clicked card is in discard pile, put back in hold pile
         @cards[card_index] = @discards[card_index]
         @discards[card_index] = nil
-        #@cards[card_index].face_up!
-        @cards[card_index].moveBy -3,+50
-        @cards[card_index].hold
+        @cards[card_index].face_up!
+        #@cards[card_index].moveBy -3,+50
+        #@cards[card_index].hold
       end
+  end
+  def mousePressEvent event
+    return if not @enabled
+    @mouse_pressed = true
+    card_index = card_clicked? event.pos #returns index of card, or false otherwise    
+    if card_index
+      @in_card = true
+      @last_card_index = card_index
+      change_card_state card_index      
     end
   end
+  def mouseReleaseEvent event
+    @mouse_pressed = false
+    @in_card = false
+  end  
   def paint painter, options, widget    
     #painter.drawPixmap 0,0, @front_pixmap
     # path = Qt::PainterPath.new

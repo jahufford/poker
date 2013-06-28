@@ -19,6 +19,8 @@ class Deck < Qt::GraphicsItem
     @boundary = 10
         
     @boundingRect = Qt::RectF.new(5,0,@card_width,@card_height)
+    @last_click_timer = Qt::Time.new
+    @last_click_timer.start
   end
   
   def paint painter, options, widget
@@ -63,8 +65,11 @@ class Deck < Qt::GraphicsItem
   def resize width, height
     @cards.each{|card| card.resize width,height}
   end
-  def mousePressEvent event
-    @on_click_receiver.send(@on_click_func)
+  def mousePressEvent event    
+   if @last_click_timer.elapsed > 500
+      @on_click_receiver.send(@on_click_func)
+   end
+   @last_click_timer.restart()
   end 
   def set_on_click receiver, func
     @on_click_receiver = receiver
