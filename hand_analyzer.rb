@@ -134,10 +134,8 @@ class HandAnalyzer < Qt::Dialog
   end
   def deck_card_clicked? pos
     @cards.each_with_index do |card,index|
-      if (pos.x>card.pos.x) and (pos.x < (card.pos.x+card.width)) and (pos.y>card.pos.y) and (pos.y<(card.pos.y + card.height))
-        if card.up?          
-          return index
-        end
+      if (pos.x>card.pos.x) and (pos.x < (card.pos.x+card.width)) and (pos.y>card.pos.y) and (pos.y<(card.pos.y + card.height))        
+        return index
       end
     end    
     false
@@ -162,8 +160,13 @@ class HandAnalyzer < Qt::Dialog
           calculate_odds
         end
         @cards[card_ind].down!
+      elsif @cards[card_ind].down?
+        card = @cards[card_ind]
+        card.up!
+        #remove from proposed hand
+        pcard_index = @proposed_hand.find_index{|item| item.rank==card.rank and item.suit==card.suit}
+        @proposed_hand[pcard_index].clear        
       end
-    else
     end
     card_ind = proposed_hand_card_clicked?(pos)
     if card_ind

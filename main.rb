@@ -66,7 +66,7 @@ class MainMenu < Qt::Widget
       end
       analyzePB = Qt::PushButton.new "Analyze Hands"
       analyzePB.connect(SIGNAL :clicked) do
-        emit selection(RubyVariant.new("analyze paytable "+elem))
+        emit selection(RubyVariant.new("analyze hands "+elem))
       end
       buttons << [gamePB,analyzePB]
     end
@@ -145,7 +145,7 @@ class MainWindow < Qt::MainWindow
       rules = DeucesWildScoring
       paytable = DeucesWildPayTable.new
       setWindowTitle "PokerGEMZ - Deuces Wild"
-    when "analyze paytable jacks or better"
+    when "analyze hands jacks or better"
       rules = JacksOrBetterScoring
       paytable = JacksOrBetterPayTable.new
       setWindowTitle "PokerGEMZ - Paytable Analyzer - Jacks or Better"      
@@ -189,7 +189,7 @@ class MainWindow < Qt::MainWindow
     discard_style_action = Qt::Action.new "Discard Style", self
     discard_style_action.connect(SIGNAL :triggered) do
     end
-    @analyzer_action = Qt::Action.new "Analyze &Paytable", self
+    @analyzer_action = Qt::Action.new "Analyze &Hands", self
     @analyzer_action.setEnabled false
     menuBar().addAction @analyzer_action
     
