@@ -16,7 +16,7 @@ require 'Qt'
 require './gameboard.rb'
 require './rules.rb'
 require './paytables.rb'
-require './paytable_analyzer.rb'
+require './hand_analyzer.rb'
 require 'net/http'
 require 'uri'
 
@@ -64,7 +64,7 @@ class MainMenu < Qt::Widget
       gamePB.connect(SIGNAL :clicked) do
         emit selection(RubyVariant.new(elem))
       end
-      analyzePB = Qt::PushButton.new "Analyze Paytable"
+      analyzePB = Qt::PushButton.new "Analyze Hands"
       analyzePB.connect(SIGNAL :clicked) do
         emit selection(RubyVariant.new("analyze paytable "+elem))
       end
@@ -124,7 +124,8 @@ class MainWindow < Qt::MainWindow
     resize 800,600
   end
   def show_main_menu
-    @paytable_action.setEnabled false      
+    @paytable_action.setEnabled false 
+    @analyzer_action.setEnabled false     
     @gameboard.view.hide unless @gameboard.nil?
     @main_menu = MainMenu.new 
     @main_menu.connect(SIGNAL('selection(QVariant)')) do |game|
@@ -139,7 +140,7 @@ class MainWindow < Qt::MainWindow
     when "jacks or better"
       rules = JacksOrBetterScoring
       paytable = JacksOrBetterPayTable.new
-      setWindowTitle "PokerGEMZ - Jacks or Better"
+      setWindowTitle "PokerGEMZ - Jacks or Better"      
     when "deuces wild"
       rules = DeucesWildScoring
       paytable = DeucesWildPayTable.new
@@ -147,22 +148,23 @@ class MainWindow < Qt::MainWindow
     when "analyze paytable jacks or better"
       rules = JacksOrBetterScoring
       paytable = JacksOrBetterPayTable.new
-      setWindowTitle "PokerGEMZ - Paytable Analyzer - Jacks or Better"
+      setWindowTitle "PokerGEMZ - Paytable Analyzer - Jacks or Better"      
     else
       puts game
       Qt::MessageBox.warning self, "Oops", "Not implemented yet"      
       return
     end
     if game.start_with? "analyze"
-      PaytableAnalyzer.new(rules,paytable).exec
-      #setCentralWidget PaytableAnalyzer.new rules, paytable
+      HandAnalyzer.new(rules,paytable).exec
+      #setCentralWidget HandAnalyzer.new rules, paytable
     else
       @gameboard = Gameboard.new(rules,paytable)
       status = statusBar()    
       @paytable_action.setEnabled true    
       connect(@paytable_action,SIGNAL('triggered()'),paytable, SLOT('adjust()'))
       connect(@gameboard,SIGNAL('quit()'),self,SLOT('show_main_menu()'))
-      
+      @analyzer_action.setEnabled true
+      connect(@analyzer_action, SIGNAL(:triggered), @gameboard, SLOT('run_analyzer()'))      
       resize(@gameboard.view.width+100, @gameboard.view.height+100)    
       setCentralWidget @gameboard.view
     end    
@@ -186,8 +188,10 @@ class MainWindow < Qt::MainWindow
     @paytable_action = Qt::Action.new "Adjust &Paytable", self
     discard_style_action = Qt::Action.new "Discard Style", self
     discard_style_action.connect(SIGNAL :triggered) do
-      
     end
+    @analyzer_action = Qt::Action.new "Analyze &Paytable", self
+    @analyzer_action.setEnabled false
+    menuBar().addAction @analyzer_action
     
     options.addAction @paytable_action
     options.addAction discard_style_action    

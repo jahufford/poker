@@ -1,6 +1,8 @@
-class PaytableAnalyzer < Qt::Dialog
-  def initialize rules, paytable
+class HandAnalyzer < Qt::Dialog
+  slots 'calculate_odds()'
+  def initialize rules, paytable, hand=nil
     super nil 
+    setWindowTitle "Hand Analyzer"
     @rules = rules
     @paytable = paytable
     multipliers = @paytable.multipliers.to_a
@@ -9,12 +11,9 @@ class PaytableAnalyzer < Qt::Dialog
     multipliers.each_with_index do |elem,ind|
       label = Qt::Label.new elem[0].to_s
       label.setFixedWidth 100
-      #label.setMinimumWidth 50
-      #label.setMaximumWidth 100
       edit = Qt::LineEdit.new elem[1].to_s
-      #edit.setMinimumWidth 50
       edit.setFixedWidth 50
-      #edit.setMaximumWidth 100
+      connect(edit, SIGNAL('editingFinished()'),self,SLOT('calculate_odds()'))
       paytable_grid.addWidget label, ind, 0
       paytable_grid.addWidget edit, ind, 1
     end
@@ -36,7 +35,7 @@ class PaytableAnalyzer < Qt::Dialog
     load_card_pix
     proposed_hand_layout = Qt::HBoxLayout.new
     proposed_hand_layout.addStretch
-    @proposed_hand = []
+    @proposed_hand = []    
     5.times do
       card = Card.new nil,nil,nil,@card_back
       #card.setPixmap @card_back
@@ -44,16 +43,17 @@ class PaytableAnalyzer < Qt::Dialog
       proposed_hand_layout.addWidget card
     end
     proposed_hand_layout.addStretch
-    card_grid = Qt::GridLayout.new    
+    card_grid = Qt::GridLayout.new
+    #load cards
     @cards = []
-    [:heart,:spade,:diamond,:club].each_with_index do |suit,row| # hearts,spades,diamonds,clubs
+    [:hearts,:spades,:diamonds,:clubs].each_with_index do |suit,row| # hearts,spades,diamonds,clubs
       (0...13).each do |col|
         card = Card.new col+1,suit, @card_fronts[row*13 + col],@card_back
         @cards << card
         card_grid.addWidget card,row,col  
       end
     end
-    
+        
     card_grid.setVerticalSpacing 1
     card_grid.setHorizontalSpacing 1
     card_grid.setSizeConstraint Qt::Layout::SetFixedSize
@@ -72,8 +72,46 @@ class PaytableAnalyzer < Qt::Dialog
       addLayout card_horiz
     end
     setLayout vert_layout
+    set_from_passed_in_hand hand
+  end
+  def set_from_passed_in_hand hand
+    #set proposed hand to passed in cards
+    if not hand.nil?
+      card_inds = []
+      hand.each do |card|
+        card_inds << @cards.find_index{ |c| c.rank==card[0] and c.suit==card[1] }
+      end      
+      card_inds.each do |i|        
+        @cards[i].down!
+        index = @proposed_hand.find_index{|item| item.rank.nil?}      
+        @proposed_hand[index].set(@cards[i])
+      end
+    end
+    calculate_odds
+  end
+  def clear_odds_table
+    @odds_table.rowCount.each do |row|
+      @odds_table.columnCount.each do |column|
+        widge = @odds_table.item row, column
+        widge.s
+      end
+    end
+  end
+  def find_total n
+    # n is number of discards
+    # (47*..(47-n+1))/(n!)
+    return 1 if n==0
+    top = 47;
+    46.downto(47-n+1) do |i|
+      top*=i
+    end
+    bottom = n
+    (n-1).downto(2){|i| bottom *= i}
+    top/bottom
   end
   def calculate_odds
+    return unless @proposed_hand.find_index{|card|card.nil_card?}.nil?
+    #show all combinations
     @combinations.each_with_index do |item,ind|
       # item is the indexes of cards to hold
       str = ""
@@ -85,8 +123,14 @@ class PaytableAnalyzer < Qt::Dialog
       end
       (5-scnt).times{str+='_'}
       widge = Qt::TableWidgetItem.new str
-      @odds_table.setItem ind, 1, widge      
-    end       
+      @odds_table.setItem ind, 1, widge
+    end
+    #fill out total number of possible hands
+    (0...32).each do |i|
+      total = find_total @odds_table.item(i,1).text.count('_')
+      widge = Qt::TableWidgetItem.new total.to_s
+      @odds_table.setItem i,2, widge
+    end    
   end
   def deck_card_clicked? pos
     @cards.each_with_index do |card,index|

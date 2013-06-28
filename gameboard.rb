@@ -171,6 +171,7 @@ end
   
 class Gameboard < Qt::Object
   signals 'quit()'
+  slots 'run_analyzer()'
   attr_accessor :view
   def initialize rules, paytable
     super nil
@@ -300,7 +301,15 @@ class Gameboard < Qt::Object
       @state = :game_on
     end
   end
-  
+  def run_analyzer    
+    if not @hand.cards.find_index(nil)
+      cards = Array.new
+      @hand.cards.each do |card|
+        cards << [card.rank,card.suit]
+      end
+    end
+    HandAnalyzer.new(@rules,@paytable,cards).exec
+  end
   def mocked_hand hand, rank,suit
     cards = hand.cards
     cards.each_with_index do |card, ind|
