@@ -68,8 +68,7 @@ class Deck < Qt::GraphicsItem
    if @last_click_timer.elapsed > 500
       @last_click_timer.restart # must reset *before* calling the recevie function, other wise you can deal multiple hands during the animation
       @on_click_receiver.send(@on_click_func)
-   end
-   #@last_click_timer.restart()
+   end   
   end 
   def set_on_click receiver, func
     @on_click_receiver = receiver
