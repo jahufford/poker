@@ -21,7 +21,7 @@ require 'net/http'
 require 'uri'
 
 $VERSION = 1
-
+$START_CREDITS = 100
 class RubyVariant < Qt::Variant
   # all these shenanigans is necessary to be able to emit
   # ruby objects from a signal. You can emit a ruby class by wrapping it in
@@ -56,6 +56,7 @@ end
 
 class MainMenu < Qt::Widget  
   signals 'selection(QVariant)'
+  attr_reader :layout
   def initialize
     super
     buttons = Array.new
@@ -86,7 +87,7 @@ class MainMenu < Qt::Widget
     # analyze_pt_deucesPB.connect(SIGNAL :clicked) do
       # emit selection(RubyVariant.new("analyze_pt_deuces_wild"))
     # end
-    layout = Qt::VBoxLayout.new do
+    @layout = Qt::VBoxLayout.new do
        addStretch
        buttons.each do |elem|
          l = Qt::GridLayout.new do
@@ -104,36 +105,53 @@ class MainMenu < Qt::Widget
       # addWidget analyze_pt_jacksPB, 0, 1
       # addWidget deuces_wildPB, 1,0
     # end
-    setLayout layout
-  end  
+    setLayout layout    
+  end
 end
   
 class MainWindow < Qt::MainWindow
-  slots 'construct_game(QVariant)','show_main_menu()'
+  slots 'construct_game(QVariant)','show_main_menu()','update_credits(int)'
   def initialize
     super
     setWindowTitle "PokerGEMZ"
-    #gameboard = Gameboard.new 
+    #gameboard = Gameboard.new
     setup_menubar    
     $statusBar = statusBar()
     statusBar.show
+    @credits_label = Qt::Label.new "$"
+    puts @credits_label
+    update_credits 100    
     show_main_menu
     # @gameboard = Gameboard.new( DeucesWildScoring,DeucesWildPayTable)
     # setCentralWidget @gameboard.view    
     # resize(@gameboard.view.width+100, @gameboard.view.height+100)
+    @options = {:discard_style=>:move}
     resize 800,600
   end
   def show_main_menu
     @paytable_action.setEnabled false 
-    @analyzer_action.setEnabled false     
+    @analyzer_action.setEnabled false
+    @discard_style_action.setEnabled true
     @gameboard.view.hide unless @gameboard.nil?
     @main_menu = MainMenu.new 
     @main_menu.connect(SIGNAL('selection(QVariant)')) do |game|
       construct_game game.value
-    end    
-    setCentralWidget @main_menu
+    end
+    layout = Qt::VBoxLayout.new
+    layout.addWidget @main_menu
+    #puts @credits_label.text
+    @credits_label = Qt::Label.new "Credits:  $#{@credits.to_s}"    
+    layout.addWidget @credits_label
+    layout.addStretch    
+    widge = Qt::Widget.new
+    widge.setLayout layout
+    
+    setCentralWidget widge
     #update
     #@main_menu.resize(@gameboard.view.width, @gameboard.view.height)
+  end
+  def update_credits credits
+    @credits = credits    
   end
   def construct_game game
     case game.downcase
@@ -158,9 +176,11 @@ class MainWindow < Qt::MainWindow
       HandAnalyzer.new(rules,paytable).exec
       #setCentralWidget HandAnalyzer.new rules, paytable
     else
-      @gameboard = Gameboard.new(rules,paytable)
+      @gameboard = Gameboard.new(rules,paytable,@credits,@options)
+      connect(@gameboard,SIGNAL('updated_credits(int)'),self, SLOT('update_credits(int)'))
       status = statusBar()    
-      @paytable_action.setEnabled true    
+      @paytable_action.setEnabled true
+      @discard_style_action.setEnabled false
       connect(@paytable_action,SIGNAL('triggered()'),paytable, SLOT('adjust()'))
       connect(@gameboard,SIGNAL('quit()'),self,SLOT('show_main_menu()'))
       @analyzer_action.setEnabled true
@@ -186,15 +206,18 @@ class MainWindow < Qt::MainWindow
  
     options = menuBar().addMenu "&Options"
     @paytable_action = Qt::Action.new "Adjust &Paytable", self
-    discard_style_action = Qt::Action.new "Discard Style", self
-    discard_style_action.connect(SIGNAL :triggered) do
+    @discard_style_action = Qt::Action.new "Discard Style", self
+    @discard_style_action.connect(SIGNAL :triggered) do 
+      choose_discard_style
+    end
+    @discard_style_action.connect(SIGNAL :triggered) do
     end
     @analyzer_action = Qt::Action.new "Analyze &Hands", self
     @analyzer_action.setEnabled false
     menuBar().addAction @analyzer_action
     
     options.addAction @paytable_action
-    options.addAction discard_style_action    
+    options.addAction @discard_style_action    
     @paytable_action.setEnabled false
     
     about = menuBar().addMenu "&About"
@@ -208,6 +231,37 @@ class MainWindow < Qt::MainWindow
     end
     about.addAction check_updates_action
     about.addAction about_action
+  end
+  def choose_discard_style
+    options = @options
+    discard_chooser = Qt::Dialog.new(self) do
+      setWindowTitle "Choose Discard Style"      
+      puts options
+      styles = [:move,:flip]
+      styles_rb = {}
+      #style_group = Qt::GroupBox.new("Discard Style") do
+      styles_rb[:flip] = Qt::RadioButton.new("Flip Cards")
+      styles_rb[:move] = Qt::RadioButton.new("Move Cards")
+      styles.each do |sym|
+        styles_rb[sym].connect(SIGNAL :clicked){
+          options[:discard_style] = sym
+          puts sym.to_s
+        }
+      end
+      styles_rb[options[:discard_style]].setChecked true
+      ok_pb = Qt::PushButton.new "Ok"
+      ok_pb.connect(SIGNAL :clicked) do
+        accept
+      end
+      layout = Qt::VBoxLayout.new
+      styles.each do |rb|
+        layout.addWidget styles_rb[rb]
+      end
+      layout.addWidget ok_pb
+      setFixedWidth 200
+      setLayout layout
+    end
+    discard_chooser.exec
   end
   def check_for_updates
     statusBar().showMessage("Checking for updates",2000)    

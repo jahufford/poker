@@ -199,9 +199,10 @@ class DeucesWildScoring
       sorted[0] = sorted[0].dup # need to dup it so cards doesn't change outside this function
       sorted[0].rank = 14 if sorted[0].rank == 1   
       if (straight_flush? sorted)
-        max_card = sorted.map{|card| card.rank}.max
-        deuce_num = sorted.select{|card| card.rank==2}.length
-        if max_card >= 14-deuce_num
+        max_card = sorted.map{|card| card.rank}.max        
+        wilds, regulars = sorted.partition{|card| card.rank==2}
+        deuce_num = wilds.length
+        if max_card >= 14-deuce_num and regulars.min{|card| card.rank}.rank>=10
         # puts "Royal Flush"
           return true
         end

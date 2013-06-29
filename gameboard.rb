@@ -59,8 +59,9 @@ end
 
 class Hand < Qt::GraphicsItem
   attr_reader :width, :height, :cards
-  def initialize number_of_cards, card_width, card_height
+  def initialize number_of_cards, card_width, card_height, discard_style    
     super nil
+    @discard_style = discard_style
     @enabled = false
     @cards = Array.new(number_of_cards) # 5 nils
     @discards = Array.new(number_of_cards)
@@ -144,15 +145,21 @@ class Hand < Qt::GraphicsItem
     if @cards[card_index] #if clicked card in @cards, put in discard pile and move up        
          @discards[card_index] = @cards[card_index]
          @cards[card_index] = nil
-         #@discards[card_index].face_down!
-         @discards[card_index].moveBy 3, -50
-         @discards[card_index].discard
+         if @discard_style == :move         
+           @discards[card_index].moveBy 3, -50
+           @discards[card_index].discard
+         else
+           @discards[card_index].face_down!
+         end 
       else #if clicked card is in discard pile, put back in hold pile
         @cards[card_index] = @discards[card_index]
         @discards[card_index] = nil
-        #@cards[card_index].face_up!
-        @cards[card_index].moveBy -3,+50
-        @cards[card_index].hold
+        if @discard_style == :move
+          @cards[card_index].moveBy -3,+50
+          @cards[card_index].hold
+        else
+          @cards[card_index].face_up!
+        end
       end
   end
   def mousePressEvent event
@@ -200,19 +207,20 @@ def pc cards #print cards
 end
   
 class Gameboard < Qt::Object
-  signals 'quit()'
+  signals 'quit()','updated_credits(int)'
   slots 'run_analyzer()'
   attr_accessor :view
-  def initialize rules, paytable
-    super nil
+  def initialize rules, paytable, credits, options
+    super nil    
     @rules = rules
     @paytable = paytable
+    @discard_style = options[:discard_style]
     @background_color = Qt::Color.new 25,150,25
     @scene = Qt::GraphicsScene.new 0,0, 800,600
     @view = MyView.new @scene    
     @view.backgroundBrush = @background_color
     @view.resize 800,600
-    @view.setWindowTitle "PokerGEMZsdfsdfg"
+    @view.setWindowTitle "PokerGEMZ"
   
     @border = 15
     @top_space = 50
@@ -224,22 +232,20 @@ class Gameboard < Qt::Object
     @card_width = @deck.card_width
     @card_height = @deck.card_height    
     @deck.setPos 100,100
-    @deck.set_on_click self, :draw_deal
-    # @deck.connect(SIGNAL :clicked) do
-      # draw_deal
-    # end
+    @deck.set_on_click self, :draw_deal    
     
-    @hand = Hand.new 5, @card_width, @card_height 
+    @hand = Hand.new 5, @card_width, @card_height, @discard_style 
     @scene.addItem @hand
     
     @state = :game_off    
     @return_menuPB = Qt::PushButton.new "Return to Menu"
     @return_menuPBGW = @scene.addWidget(@return_menuPB)
     @return_menuPB.connect(SIGNAL :clicked) do
-      emit quit
+      return_to_menu
     end
     
     @draw_dealPB = Qt::PushButton.new "Deal"
+    #@draw_dealPB = MyButton.new "Hello"
     @draw_dealPBGW = @scene.addWidget(@draw_dealPB)
     #draw_deal
     @hand.setPos (@view.width-@hand.width)/2, @view.height-@hand.height-100    
@@ -247,7 +253,7 @@ class Gameboard < Qt::Object
     @draw_dealPB.connect(SIGNAL :clicked) do
       draw_deal
     end
-    @credits = 500
+    @credits = credits
     @creditsL = Qt::Label.new ("Credits: " + @credits.to_s)
     @creditsL.setMinimumWidth 130
     #@creditsL.setAlignment(Qt::AlignRight)
@@ -303,7 +309,11 @@ class Gameboard < Qt::Object
       while Qt::Time.currentTime < delay do
         Qt::Application.processEvents
     end
-  end  
+  end
+  def return_to_menu
+    emit updated_credits(@credits.to_i)
+    emit quit
+  end
   def draw_deal
     if @state == :game_on
       @payout_board.clear_highlights
@@ -322,27 +332,50 @@ class Gameboard < Qt::Object
       end
       
       score_hand @hand
-      @return_menuPB.setEnabled true
-      @hand_overGTI.setPlainText("Time to draw a new hand!")
+      @return_menuPB.setEnabled true      
+      if @credits == 0
+        msg_box = Qt::MessageBox.new
+        msg_box.setWindowTitle "Bummer"
+        msg_box.setText "Out of Credits. Play Again?"
+        msg_box.addButton Qt::MessageBox::No
+        msg_box.addButton Qt::MessageBox::Yes
+        response = msg_box.exec
+        if response == Qt::MessageBox::Yes
+          @credits = $START_CREDITS
+          @creditsL.setText("Credits: " + @credits.to_s)
+          @hand.clear
+           @hand_overGTI.setPlainText("Time to draw a new hand!")
+        else
+          return_to_menu
+        end          
+      else
+        @hand_overGTI.setPlainText("Time to draw a new hand!")
+      end
       @state = :game_off
     else
       @payout_board.clear_highlights      
       @hand.clear
       @hand.enable
       @deck.shuffle
+      if @credits < @bet
+        Qt::MessageBox.information nil, "Oops", "Bet down or insert more money"        
+        return
+      end
+      @credits -= @bet
+      @creditsL.setText("Credits: " + @credits.to_s)
+      @return_menuPB.setEnabled false
+      
+      
+      
       @draw_dealPB.setText("Draw")
       5.times do 
         @hand.add @deck.deal_card
         delay_ms 25
-      end
-      #delay_ms 100
+      end      
       @hand.cards.each do |card|
         card.face_up!
         delay_ms 25
-      end 
-      @credits -= @bet
-      @creditsL.setText("Credits: " + @credits.to_s)
-      @return_menuPB.setEnabled false
+      end
 
       result_of_draw = @rules.score_hand @hand.cards
       @payout_board.highlight result_of_draw
@@ -372,17 +405,34 @@ class Gameboard < Qt::Object
     # because a straight flush is higher than a straight or a flush
     
     cards = hand.cards
-    
-    # cards = mocked_hand hand, [1,13,12,10,11],[:heart,:heart,:heart,:heart,:heart] #royal flush
+        
+    # cards = mocked_hand hand, [12,8,2,2,11],[:diamond,:diamond,:club,:diamond,:diamond] #royal flush
     # @rules.score_hand cards
-  
-   
+    # cards = mocked_hand hand, [12,9,2,2,11],[:diamond,:diamond,:club,:diamond,:diamond] #royal flush
+    # @rules.score_hand cards
+    # cards = mocked_hand hand, [12,10,2,2,11],[:diamond,:diamond,:club,:diamond,:diamond] #royal flush
+    # @rules.score_hand cards
+    # puts "----"
+    
     result = @rules.score_hand cards
     $statusBar.showMessage(result.to_s,2000)
     Qt::Application.processEvents   
     multiplier = @paytable.return_multiplier result
     @credits += @bet*multiplier
-    @creditsL.setText("Credits: " + @credits.to_s)
+    @creditsL.setText("Credits: " + @credits.to_s)    
     @payout_board.highlight result
+  end
+end
+
+class MyButton < Qt::AbstractButton
+  def initialize text
+   super nil
+   setText text
+  end
+  def paintEvent event
+    puts "hiddd"
+    painter Qt::Painter.new self
+    brush = Qt::Brush.new Qt::Red
+    painter.fillRect 0,0,10,10,brush
   end
 end

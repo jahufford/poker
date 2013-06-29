@@ -258,5 +258,4 @@ class HandAnalyzer < Qt::Dialog
       @rank.nil?
     end
   end
-
 end
