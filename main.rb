@@ -108,6 +108,20 @@ class MainMenu < Qt::Widget
     setLayout layout    
   end
 end
+
+
+class MyButton < Qt::AbstractButton
+  def initialize text
+   super nil
+   setText text
+  end
+  def paintEvent event
+    puts "hiddd"
+    painter Qt::Painter.new self
+    brush = Qt::Brush.new Qt::Red
+    painter.fillRect 0,0,10,10,brush
+  end
+end
   
 class MainWindow < Qt::MainWindow
   slots 'construct_game(QVariant)','show_main_menu()','update_credits(int)'

@@ -73,6 +73,28 @@ class HandAnalyzer < Qt::Dialog
     end
     setLayout vert_layout
     set_from_passed_in_hand hand
+    
+    #create a big hash in a hash. The first hash will have all the combination of ways you can hold a hand (30), and 
+    # it's value will be another hash that has the hand types (royal flush, pair, etc) as the key with the value being
+    # the number of possible hands
+    # eg, if you keep the 1st and 3rd card in your hand
+    # @results[[1,3]] is a hash with with :royal_flush=>number_of_royal_flushes possible
+    #                                     :pair=> number_of_pairs possible and so on
+    # @results[[1,3]][:royal_flush] = number of royal flushes possible
+    hand_syms = [:royal_flush, :straight_flush, :four_of_kind,:full_house,:flush,:straight,:three_of_kind,:two_pair,:pair,:nothing]
+    hand_hash = Hash.new
+    hand_syms.each do |sym|
+      hand_hash[sym] = 0
+    end
+    combo_indexes = []
+    (0...5).to_a.each do |num|
+      [1,2,3,4,5].combination(num).to_a.each{|combo| combo_indexes << combo}
+    end
+    @results = Hash.new
+    combo_indexes.each do |combo|
+      @results[combo] = hand_hash.dup
+    end
+    
   end
   def set_from_passed_in_hand hand
     #set proposed hand to passed in cards
@@ -130,7 +152,8 @@ class HandAnalyzer < Qt::Dialog
       total = find_total @odds_table.item(i,1).text.count('_')
       widge = Qt::TableWidgetItem.new total.to_s
       @odds_table.setItem i,2, widge
-    end    
+    end
+    puts "Starting bruth force"
   end
   def deck_card_clicked? pos
     @cards.each_with_index do |card,index|

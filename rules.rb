@@ -3,7 +3,7 @@ class JacksOrBetterScoring
     def flush? cards
       suit = cards[0].suit
       if cards.select{|card| card.suit == suit}.length == 5
-        puts "Flush"
+        #puts "Flush"
         return true
       end
       false
@@ -24,13 +24,13 @@ class JacksOrBetterScoring
         end
         b
       end
-      puts "Straight"
+      #puts "Straight"
       true
     end
     
     def straight_flush? cards
       if straight?(cards) and flush?(cards)
-        puts "Straight Flush"
+     #   puts "Straight Flush"
         return true
       end
       false
@@ -42,7 +42,7 @@ class JacksOrBetterScoring
       sorted[0] = sorted[0].dup # need to dup it so cards doesn't change outside this function
       sorted[0].rank = 14 if sorted[0].rank == 1   
       if (straight_flush? sorted) and (sorted.map{|card|card.rank}.max == 14)
-        puts "Royal Flush"
+        #puts "Royal Flush"
         return true
       end
       false
@@ -52,7 +52,7 @@ class JacksOrBetterScoring
       sets = find_sets(cards)   
       if sets.length == 1
         if (sets[0][0] == 2) and ((sets[0][1]>=11) or (sets[0][1]==1)  )# jacks or better      
-          puts "pair #{sets[0][1]}'s"
+        #  puts "pair #{sets[0][1]}'s"
           return true
         end
       end
@@ -62,7 +62,7 @@ class JacksOrBetterScoring
       sets = find_sets(cards)   
       if sets.length == 1
         if sets[0][0] == 3      
-          puts "three #{sets[0][1]}'s"
+         # puts "three #{sets[0][1]}'s"
           return true
         end
       end
@@ -72,7 +72,7 @@ class JacksOrBetterScoring
       sets = find_sets(cards) 
       if sets.length == 1
         if sets[0][0] == 4      
-          puts "four #{sets[0][1]}'s"
+        #  puts "four #{sets[0][1]}'s"
           return true
         end
       end
@@ -82,7 +82,7 @@ class JacksOrBetterScoring
       sets = find_sets(cards)   
       if sets.length == 2
         if sets[0][0] == 2 and sets[1][0] == 2
-          puts "Two Pair: pair #{sets[1][1]}'s and pair of #{sets[0][1]}'s"
+         # puts "Two Pair: pair #{sets[1][1]}'s and pair of #{sets[0][1]}'s"
           return true
         end
       end
@@ -91,7 +91,7 @@ class JacksOrBetterScoring
       sets = find_sets(cards)   
       if sets.length == 2
         if sets[0][0] == 2 and sets[1][0] == 3
-          puts "Full House: three #{sets[1][1]}'s and pair of #{sets[0][1]}'s"
+          #puts "Full House: three #{sets[1][1]}'s and pair of #{sets[0][1]}'s"
           return true
         end
       end
@@ -165,7 +165,8 @@ class JacksOrBetterScoring
       elsif pair? cards
         result = :pair
       else
-        puts "nothing"             
+        result = :nothing
+        #puts "nothing"
       end
       return result
     end
