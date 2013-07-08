@@ -1,3 +1,4 @@
+#FIX guarantee order of table
 class HandAnalyzer < Qt::Dialog
   slots 'calculate_odds()'
   def initialize rules, paytable, hand=nil
@@ -19,6 +20,7 @@ class HandAnalyzer < Qt::Dialog
     end
     paytable_grid.setSizeConstraint Qt::Layout::SetMaximumSize
     @odds_table = Qt::TableWidget.new 32, multipliers.length+4, self #+4 for return, hold, total, nothing    
+    @headers = 
     headers = ["Return","Hold","Total","Nothing"]
     multipliers.each do |item|
       headers << item[0].to_s
@@ -90,7 +92,7 @@ class HandAnalyzer < Qt::Dialog
     @results = Hash.new
     @combinations.each do |combo|
       @results[combo] = hand_hash.dup
-    end    
+    end
   end
   def set_from_passed_in_hand hand
     #set proposed hand to passed in cards
@@ -127,18 +129,38 @@ class HandAnalyzer < Qt::Dialog
     (n-1).downto(2){|i| bottom *= i}
     top/bottom
   end
-  
   def init_odds_table
+    header_syms = [:return, :hand, :total, :nothing, :royal_flush, :straight_flush, :four_of_kind,:full_house,:flush,:straight,:three_of_kind,:two_pair,:pair]
+    odds_hash = Hash.new
+    header_syms.each do |sym|
+      odds_hash[sym] = 0
+    end    
+    @odds_table_array = Array.new # this gives me an array of hashes that will hold the tableWidgetItems
+    for i in 0...32
+      @odds_table_array << odds_hash.dup
+    end
     if not @odds_table_initialezed
       (0...32).each do |row|      
-        (0...(14)).each do |col|
+        (0...(14)).each do |col|          
           widge = Qt::TableWidgetItem.new " #{row} #{col}"
+          @odds_table_array[row][header_syms[col]] = widge
           @odds_table.setItem row,col,widge
         end
       end  
     end
     @odds_table_initialized = true
-  end 
+  end
+  def update_odds_table
+    results_a = @results.to_a
+    results_a.sort!{|a,b| b[1][:total] <=> a[1][:total]}
+    results_a.each_with_index do |row, r|
+      #puts row[1].to_s
+      row[1].each_pair do |key, value|
+       # puts @odds_table_array[r].to_s        
+        @odds_table_array[r][key].setText(value.to_s) 
+      end      
+    end
+  end
   def calculate_odds
     return unless @proposed_hand.find_index{|card|card.nil_card?}.nil?
     init_odds_table
@@ -148,27 +170,19 @@ class HandAnalyzer < Qt::Dialog
       str = ""
       scnt = 0
       item.sort.each do |i| #items are indexes into the hand ie [1,3] means @proposed_hand[1] and @proposed_hand[3] are held, the rest are discard
-        (i-scnt).times{str+='_'}
+        (i-scnt).times{str+='_ '}
         scnt = i+1
-        str += @proposed_hand[i].rank_s
+        str += @proposed_hand[i].rank_s + ' '
       end
-      (5-scnt).times{str+='_'}
+      (5-scnt).times{str+='_ '}
       @results[item][:hand] = str
-      puts @results[item].to_s
+      @results[item][:total] = find_total str.count('_') #total number of possible hands with that hold      
       #@odds_table.item(ind, 1).setText(str) 
       #widge = Qt::TableWidgetItem.new str      
       #@odds_table.setItem ind, 1, widge
-    end
-    #fill out total number of possible hands
-    (0...32).each do |i|
-      total = find_total @odds_table.item(i,1).text.count('_')
-      
-    end
+    end    
     update_odds_table
-  end  
-  def update_odds_table
-    
-  end
+  end   
   def brute_force
       # puts "Starting brute force"
     # @results.each_pair do |hold, cols|
