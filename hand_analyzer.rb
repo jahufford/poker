@@ -18,14 +18,15 @@ class HandAnalyzer < Qt::Dialog
       paytable_grid.addWidget edit, ind, 1
     end
     paytable_grid.setSizeConstraint Qt::Layout::SetMaximumSize
-    @odds_table = Qt::TableWidget.new 32, multipliers.length+4, self
+    @odds_table = Qt::TableWidget.new 32, multipliers.length+4, self #+4 for return, hold, total, nothing    
     headers = ["Return","Hold","Total","Nothing"]
     multipliers.each do |item|
       headers << item[0].to_s
     end
     @odds_table.setHorizontalHeaderLabels(headers)
+    @odds_table_initialized = false
     nums = [0,1,2,3,4]
-    @combinations = []
+    @combinations = [] # all the possible ways to play a hand
     (0..5).each do |num|
       nums.combination(num).to_a.each do |item|
         @combinations << item
@@ -81,20 +82,15 @@ class HandAnalyzer < Qt::Dialog
     # @results[[1,3]] is a hash with with :royal_flush=>number_of_royal_flushes possible
     #                                     :pair=> number_of_pairs possible and so on
     # @results[[1,3]][:royal_flush] = number of royal flushes possible
-    hand_syms = [:royal_flush, :straight_flush, :four_of_kind,:full_house,:flush,:straight,:three_of_kind,:two_pair,:pair,:nothing]
+    hand_syms = [:return, :hand, :total, :nothing, :royal_flush, :straight_flush, :four_of_kind,:full_house,:flush,:straight,:three_of_kind,:two_pair,:pair]
     hand_hash = Hash.new
     hand_syms.each do |sym|
       hand_hash[sym] = 0
-    end
-    combo_indexes = []
-    (0...5).to_a.each do |num|
-      [1,2,3,4,5].combination(num).to_a.each{|combo| combo_indexes << combo}
-    end
+    end    
     @results = Hash.new
-    combo_indexes.each do |combo|
+    @combinations.each do |combo|
       @results[combo] = hand_hash.dup
-    end
-    
+    end    
   end
   def set_from_passed_in_hand hand
     #set proposed hand to passed in cards
@@ -131,11 +127,24 @@ class HandAnalyzer < Qt::Dialog
     (n-1).downto(2){|i| bottom *= i}
     top/bottom
   end
+  
+  def init_odds_table
+    if not @odds_table_initialezed
+      (0...32).each do |row|      
+        (0...(14)).each do |col|
+          widge = Qt::TableWidgetItem.new " #{row} #{col}"
+          @odds_table.setItem row,col,widge
+        end
+      end  
+    end
+    @odds_table_initialized = true
+  end 
   def calculate_odds
     return unless @proposed_hand.find_index{|card|card.nil_card?}.nil?
-    #show all combinations
-    @combinations.each_with_index do |item,ind|
-      # item is the indexes of cards to hold
+    init_odds_table
+    #show all combinations    
+    @combinations.each_with_index do |item,ind|      
+      #item is the indexes of cards to hold
       str = ""
       scnt = 0
       item.sort.each do |i| #items are indexes into the hand ie [1,3] means @proposed_hand[1] and @proposed_hand[3] are held, the rest are discard
@@ -144,16 +153,63 @@ class HandAnalyzer < Qt::Dialog
         str += @proposed_hand[i].rank_s
       end
       (5-scnt).times{str+='_'}
-      widge = Qt::TableWidgetItem.new str
-      @odds_table.setItem ind, 1, widge
+      @results[item][:hand] = str
+      puts @results[item].to_s
+      #@odds_table.item(ind, 1).setText(str) 
+      #widge = Qt::TableWidgetItem.new str      
+      #@odds_table.setItem ind, 1, widge
     end
     #fill out total number of possible hands
     (0...32).each do |i|
       total = find_total @odds_table.item(i,1).text.count('_')
-      widge = Qt::TableWidgetItem.new total.to_s
-      @odds_table.setItem i,2, widge
+      
     end
-    puts "Starting bruth force"
+    update_odds_table
+  end  
+  def update_odds_table
+    
+  end
+  def brute_force
+      # puts "Starting brute force"
+    # @results.each_pair do |hold, cols|
+      # cols[:total] = find_total(5-hold.length)
+    # end
+    # # #puts @cards[0]
+    # # #puts @proposed_hand[0]
+    # #this loops 32 times, for each of every way to play a hand
+    # timer = Qt::Time.new
+#     
+    # cnt = 0
+    # time2 = 0
+    # timer2 = Qt::Time.new
+    # timer.start
+    # @results.each_pair do |held, scored|
+      # #held is the indexes of @proposed_hand that are kept
+    # #  break if cnt == 10000
+     # # cnt += 1      
+      # puts held.to_s      
+      # remaining_cards = @cards.reject{|card| @proposed_hand.find_index(card)} #cards left in the deck #try to replace with include?
+      # #now figure all the ways to draw a hand from the remaining cards
+      # hand = []
+      # (0...47).to_a.combination(5-held.length).each do |comb|        
+        # #hand = [] # this will be the hand to score
+      # #  break if cnt == 10000
+      # #  cnt += 1
+        # hand.clear
+        # held.each do |i| # add cards from @propsed_hand that were kept
+          # hand << @proposed_hand[i]        
+        # end
+        # comb.each{|i| hand << remaining_cards[i]}
+        # timer2.start
+        # result = @rules.score_hand(hand)
+        # time2 += timer2.elapsed
+        # timer2.restart        
+        # scored[result] += 1
+      # end
+    # end    
+    # puts @results.to_s
+    # puts timer.elapsed
+    # puts time2    
   end
   def deck_card_clicked? pos
     @cards.each_with_index do |card,index|
@@ -222,7 +278,7 @@ class HandAnalyzer < Qt::Dialog
     @card_back = card_backs[3]    
   end
   class Card < Qt::Label
-    attr_reader :rank,:suit,:card_front,:card_back,:state,:width,:height
+    attr_accessor :rank,:suit,:card_front,:card_back,:state,:width,:height
     def initialize rank,suit,card_front,card_back
       super nil
       @rank = rank
@@ -279,6 +335,12 @@ class HandAnalyzer < Qt::Dialog
     end
     def nil_card?
       @rank.nil?
+    end
+    def ==(obj)
+      if obj.class == self.class        
+        return (@rank==obj.rank and @suit==obj.suit)
+      end
+      false
     end
   end
 end

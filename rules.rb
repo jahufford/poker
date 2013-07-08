@@ -8,18 +8,19 @@ class JacksOrBetterScoring
       end
       false
     end
-    def straight? cards
-      sorted = cards.sort { |card1,card2| card1.rank<=>card2.rank}
-      sorted.map!{ |card| card.rank}          
-      if sorted[0] == 1 and sorted[1] != 2 # treat ace as one if the next card is 2, otherwise treat as 14
+    def straight? cards, sorted
+      #sorted = cards.sort { |card1,card2| card1.rank<=>card2.rank}
+     # sorted.map!{ |card| card.rank}          
+      if sorted[0].rank == 1 and sorted[1].rank != 2 # treat ace as one if the next card is 2, otherwise treat as 14
         #sorted[0] = sorted[0].dup # dup it so it doesn't change cards outside this func
-        sorted[0] = 14
+        sorted = sorted.dup
+        sorted[0].rank = 14
         sorted.sort!
       end
       
       straight = true
       sorted.reduce do |a,b|
-        if a != (b-1)        
+        if a.rank != (b.rank-1)        
           return false
         end
         b
@@ -28,28 +29,30 @@ class JacksOrBetterScoring
       true
     end
     
-    def straight_flush? cards
-      if straight?(cards) and flush?(cards)
+    def straight_flush? cards, sorted
+      if straight?(cards, sorted) and flush?(cards)
      #   puts "Straight Flush"
         return true
       end
       false
     end
     
-    def royal_flush? cards
-      sorted = cards.sort{ |card1,card2| card1.rank <=> card2.rank}
-      ranks = sorted.map{|card| card.rank}
-      sorted[0] = sorted[0].dup # need to dup it so cards doesn't change outside this function
-      sorted[0].rank = 14 if sorted[0].rank == 1   
-      if (straight_flush? sorted) and (sorted.map{|card|card.rank}.max == 14)
+    def royal_flush? cards, sorted
+      #sorted = cards.sort{ |card1,card2| card1.rank <=> card2.rank}
+      #ranks = sorted.map{|card| card.rank}
+      if sorted[0].rank == 1
+        sorted = sorted.dup # need to dup it so cards doesn't change outside this function
+        sorted[0].rank = 14
+      end   
+      if (straight_flush? cards, sorted) and (sorted.map{|card|card.rank}.max == 14)
         #puts "Royal Flush"
         return true
       end
       false
     end
     
-    def pair? cards
-      sets = find_sets(cards)   
+    def pair? cards, sets
+      #sets = find_sets(cards)   
       if sets.length == 1
         if (sets[0][0] == 2) and ((sets[0][1]>=11) or (sets[0][1]==1)  )# jacks or better      
         #  puts "pair #{sets[0][1]}'s"
@@ -58,8 +61,8 @@ class JacksOrBetterScoring
       end
       false
     end  
-    def three_of_kind? cards
-      sets = find_sets(cards)   
+    def three_of_kind? cards, sets
+      #sets = find_sets(cards)  
       if sets.length == 1
         if sets[0][0] == 3      
          # puts "three #{sets[0][1]}'s"
@@ -68,8 +71,8 @@ class JacksOrBetterScoring
       end
       false 
     end
-    def four_of_kind? cards
-      sets = find_sets(cards) 
+    def four_of_kind? cards, sets
+      #sets = find_sets(cards) 
       if sets.length == 1
         if sets[0][0] == 4      
         #  puts "four #{sets[0][1]}'s"
@@ -78,8 +81,8 @@ class JacksOrBetterScoring
       end
       false
     end
-    def two_pair? cards
-      sets = find_sets(cards)   
+    def two_pair? cards, sets
+      #sets = find_sets(cards)   
       if sets.length == 2
         if sets[0][0] == 2 and sets[1][0] == 2
          # puts "Two Pair: pair #{sets[1][1]}'s and pair of #{sets[0][1]}'s"
@@ -87,8 +90,8 @@ class JacksOrBetterScoring
         end
       end
     end
-    def full_house? cards      
-      sets = find_sets(cards)   
+    def full_house? cards, sets   
+      #sets = find_sets(cards)   
       if sets.length == 2
         if sets[0][0] == 2 and sets[1][0] == 3
           #puts "Full House: three #{sets[1][1]}'s and pair of #{sets[0][1]}'s"
@@ -146,23 +149,25 @@ class JacksOrBetterScoring
       end
     end
     def score_hand cards
-      if royal_flush? cards
+      sorted = cards.sort{|card1,card2| card1.rank<=>card2.rank}
+      sets = find_sets(cards)
+      if royal_flush? cards, sorted
         result = :royal_flush
-      elsif straight_flush? cards
+      elsif straight_flush? cards, sorted
         result = :straight_flush
-      elsif four_of_kind? cards
+      elsif four_of_kind? cards, sets
         result = :four_of_kind
-      elsif full_house? cards
+      elsif full_house? cards, sets
         result = :full_house
       elsif flush? cards
         result = :flush
-      elsif straight? cards
+      elsif straight? cards, sorted
         result = :straight
-      elsif three_of_kind? cards
+      elsif three_of_kind? cards, sets
         result = :three_of_kind
-      elsif two_pair? cards
+      elsif two_pair? cards, sets
         result = :two_pair
-      elsif pair? cards
+      elsif pair? cards,  sets
         result = :pair
       else
         result = :nothing
