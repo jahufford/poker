@@ -187,7 +187,7 @@ class MainWindow < Qt::MainWindow
       return
     end
     if game.start_with? "analyze"
-      HandAnalyzer.new(rules,paytable).exec
+      HandAnalyzer.new(rules,paytable).show
       #setCentralWidget HandAnalyzer.new rules, paytable
     else
       @gameboard = Gameboard.new(rules,paytable,@credits,@options)

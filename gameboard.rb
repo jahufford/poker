@@ -330,8 +330,9 @@ class Gameboard < Qt::Object
         delay_ms 25
         card.face_up!
       end
-      
+      puts "about to score hand"
       score_hand @hand
+      puts "done scoring hand"
       @return_menuPB.setEnabled true      
       if @credits == 0
         msg_box = Qt::MessageBox.new
@@ -364,9 +365,7 @@ class Gameboard < Qt::Object
       @credits -= @bet
       @creditsL.setText("Credits: " + @credits.to_s)
       @return_menuPB.setEnabled false
-      
-      
-      
+
       @draw_dealPB.setText("Draw")
       5.times do 
         @hand.add @deck.deal_card
@@ -381,6 +380,7 @@ class Gameboard < Qt::Object
       @payout_board.highlight result_of_draw
       @hand_overGTI.setPlainText("")
       @state = :game_on
+      puts "Yo"
     end
   end
   def run_analyzer    
@@ -390,7 +390,7 @@ class Gameboard < Qt::Object
         cards << [card.rank,card.suit]
       end
     end
-    HandAnalyzer.new(@rules,@paytable,cards).exec
+    HandAnalyzer.new(@rules,@paytable,cards).show
   end
   def mocked_hand hand, rank,suit
     cards = hand.cards
@@ -410,11 +410,14 @@ class Gameboard < Qt::Object
     # @rules.score_hand cards
     # cards = mocked_hand hand, [12,9,2,2,11],[:diamond,:diamond,:club,:diamond,:diamond] #royal flush
     # @rules.score_hand cards
-    # cards = mocked_hand hand, [12,10,2,2,11],[:diamond,:diamond,:club,:diamond,:diamond] #royal flush
-    # @rules.score_hand cards
-    # puts "----"
-    
+    #cards = mocked_hand hand, [10,11,12,13,1],[:heart,:heart,:heart,:heart,:heart] #royal flush
+    #@cards = mocked_hand hand, [10,1,1,13,11],[:heart,:heart,:club,:heart,:heart]
+    #puts @rules.score_hand(cards).to_s    
+    #puts "----"
+    #pc cards
     result = @rules.score_hand cards
+    puts result.to_s
+    
     $statusBar.showMessage(result.to_s,2000)
     Qt::Application.processEvents   
     multiplier = @paytable.return_multiplier result

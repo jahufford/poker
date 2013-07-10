@@ -13,9 +13,10 @@ class JacksOrBetterScoring
      # sorted.map!{ |card| card.rank}          
       if sorted[0].rank == 1 and sorted[1].rank != 2 # treat ace as one if the next card is 2, otherwise treat as 14
         #sorted[0] = sorted[0].dup # dup it so it doesn't change cards outside this func
-        sorted = sorted.dup
+        #sorted = sorted.dup
+        sorted = sorted.map{|card| card.dup}
         sorted[0].rank = 14
-        sorted.sort!
+        sorted.sort!{|card1,card2| card1.rank<=>card2.rank}
       end
       
       straight = true
@@ -41,10 +42,12 @@ class JacksOrBetterScoring
       #sorted = cards.sort{ |card1,card2| card1.rank <=> card2.rank}
       #ranks = sorted.map{|card| card.rank}
       if sorted[0].rank == 1
-        sorted = sorted.dup # need to dup it so cards doesn't change outside this function
+        sorted = sorted.map{|card| card.dup} # need to dup it so cards doesn't change outside this function
         sorted[0].rank = 14
+        sorted.sort!{|card1,card2| card1.rank<=>card2.rank}
       end   
-      if (straight_flush? cards, sorted) and (sorted.map{|card|card.rank}.max == 14)
+      if (straight_flush? cards, sorted) and (sorted.max_by{|card| card.rank}.rank == 14)
+        
         #puts "Royal Flush"
         return true
       end
@@ -148,7 +151,7 @@ class JacksOrBetterScoring
         puts "no sets"
       end
     end
-    def score_hand cards
+    def score_hand cards      
       sorted = cards.sort{|card1,card2| card1.rank<=>card2.rank}
       sets = find_sets(cards)
       if royal_flush? cards, sorted
