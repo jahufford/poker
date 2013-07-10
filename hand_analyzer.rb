@@ -89,7 +89,7 @@ class HandAnalyzer < Qt::MainWindow
     # eg, if you keep the 1st and 3rd card in your hand
     # @results[[1,3]] is a hash with with :royal_flush=>number_of_royal_flushes possible
     #                                     :pair=> number_of_pairs possible and so on
-    # @results[[1,3]][:royal_flush] = number of royal flushes possible
+    # @results[[1,3]][:royal_flush] = number of royal flushes possible    
     hand_syms = [:return, :hand, :total, :nothing, :royal_flush, :straight_flush, :four_of_kind,:full_house,:flush,:straight,:three_of_kind,:two_pair,:pair]
     hand_hash = Hash.new
     hand_syms.each do |sym|
@@ -99,7 +99,14 @@ class HandAnalyzer < Qt::MainWindow
     @combinations.each do |combo|
       @results[combo] = hand_hash.dup
     end
-    puts @results.to_s
+    #puts @results.to_s
+  end
+  def clear_results    
+    @results.each_pair do |key, value|
+      value.each_pair do |k,v|
+        @results[key][k] = 0
+      end
+    end
   end
   def set_from_passed_in_hand hand
     #set proposed hand to passed in cards
@@ -157,18 +164,21 @@ class HandAnalyzer < Qt::MainWindow
     end
     @odds_table_initialized = true
   end
-  def update_odds_table
+  def update_odds_table    
     results_a = @results.to_a
     results_a.sort!{|a,b| b[1][:total] <=> a[1][:total]}
     results_a.each_with_index do |row, r|
+      puts "#{row.to_s} #{r}"
       row[1].each_pair do |key, value|
-        @odds_table_array[r][key].setText(value.to_s) 
+        puts "#{r} #{key.to_s} #{value.to_s}"
+        @odds_table_array[r][key].setText(value.to_s)
+        #@odds_table_array[r][key].setText("#{r},#{key}, #{row.to_s}") 
       end      
     end
   end
   def calculate_odds
-    puts "HIHI"
     return unless @proposed_hand.find_index{|card|card.nil_card?}.nil?
+    clear_results
     init_odds_table
     #show all combinations    
     @combinations.each_with_index do |item,ind|      
@@ -231,6 +241,7 @@ class HandAnalyzer < Qt::MainWindow
         result = @rules.score_hand @proposed_hand
         puts result.to_s
         @results[held][result] += 1
+        puts @results
     end    
   end
   def brute_force
