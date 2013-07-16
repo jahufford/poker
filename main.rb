@@ -115,8 +115,7 @@ class MyButton < Qt::AbstractButton
    super nil
    setText text
   end
-  def paintEvent event
-    puts "hiddd"
+  def paintEvent event    
     painter Qt::Painter.new self
     brush = Qt::Brush.new Qt::Red
     painter.fillRect 0,0,10,10,brush
@@ -133,7 +132,7 @@ class MainWindow < Qt::MainWindow
     $statusBar = statusBar()
     statusBar.show
     @credits_label = Qt::Label.new "$"
-    puts @credits_label
+   
     update_credits 100    
     show_main_menu
     # @gameboard = Gameboard.new( DeucesWildScoring,DeucesWildPayTable)

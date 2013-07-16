@@ -2,7 +2,7 @@
 class HandAnalyzer < Qt::MainWindow
   slots 'calculate_odds()'
   def initialize rules, paytable, hand=nil
-    super nil 
+    super nil     
     setWindowTitle "Hand Analyzer"
     @rules = rules
     @paytable = paytable
@@ -16,7 +16,7 @@ class HandAnalyzer < Qt::MainWindow
       edit.setFixedWidth 50
       #connect(edit, SIGNAL('editingFinished()'),self,SLOT('calculate_odds()'))
       edit.connect(SIGNAL :editingFinished) do 
-        puts "why"
+        #puts "why"
         #calculate_odds()
       end
       paytable_grid.addWidget label, ind, 0
@@ -100,6 +100,8 @@ class HandAnalyzer < Qt::MainWindow
       @results[combo] = hand_hash.dup
     end
     #puts @results.to_s
+   # showMaximized()
+    setMinimumWidth(1250)
   end
   def clear_results    
     @results.each_pair do |key, value|
@@ -168,9 +170,9 @@ class HandAnalyzer < Qt::MainWindow
     results_a = @results.to_a
     results_a.sort!{|a,b| b[1][:total] <=> a[1][:total]}
     results_a.each_with_index do |row, r|
-      puts "#{row.to_s} #{r}"
+      #puts "#{row.to_s} #{r}"
       row[1].each_pair do |key, value|
-        puts "#{r} #{key.to_s} #{value.to_s}"
+        #puts "#{r} #{key.to_s} #{value.to_s}"
         @odds_table_array[r][key].setText(value.to_s)
         #@odds_table_array[r][key].setText("#{r},#{key}, #{row.to_s}") 
       end      
@@ -180,6 +182,7 @@ class HandAnalyzer < Qt::MainWindow
     return unless @proposed_hand.find_index{|card|card.nil_card?}.nil?
     clear_results
     init_odds_table
+    puts "---------------------"
     #show all combinations    
     @combinations.each_with_index do |item,ind|      
       #item is the indexes of cards to hold
@@ -199,51 +202,187 @@ class HandAnalyzer < Qt::MainWindow
     end  
     update_odds_table
   end
-  def count_hands held    
-    held_cards = []
-    held.each do |ind|
-      held_cards << @proposed_hand[ind]
-    end
+  def choose n, r
+    numerator = n.downto(n-r+1).reduce(1){|product,value| product*value}
+    denominator = r.downto(2).reduce(1){|product,value| product*value}
+    numerator/denominator
+  end
+  def count_hands held #held is an array of indices of the held cards in @proposed_hand
+    discards = (0..4).to_a.map{|i| i if not held.include?(i)}.compact
+    discarded_cards = discards.map{|i| @proposed_hand[i] }
+    held_cards = held.map{|i| @proposed_hand[i] }    
+    sorted_held = held_cards.sort{|a,b,|a.rank <=> b.rank}
     case held
       when []
+        @results[held][:nothing] = find_nothing held
       when [0]
+        @results[held][:nothing] = find_nothing held
       when [1]
+        @results[held][:nothing] = find_nothing held
       when [2]
+        @results[held][:nothing] = find_nothing held
       when [3]
+        @results[held][:nothing] = find_nothing held
       when [4]
+        @results[held][:nothing] = find_nothing held
       when [0, 1]
+        @results[held][:nothing] = find_nothing held
       when [0, 2]
+        @results[held][:nothing] = find_nothing held
       when [0, 3]
+        @results[held][:nothing] = find_nothing held
       when [0, 4]
+        @results[held][:nothing] = find_nothing held
       when [1, 2]
+        @results[held][:nothing] = find_nothing held
       when [1, 3]
+        @results[held][:nothing] = find_nothing held
       when [1, 4]
+        @results[held][:nothing] = find_nothing held
       when [2, 3]
+        @results[held][:nothing] = find_nothing held
       when [2, 4]
+        @results[held][:nothing] = find_nothing held
       when [3, 4]
-      when [0, 1, 2]
-      when [0, 1, 3]
-      when [0, 1, 4]
-      when [0, 2, 3]
-      when [0, 2, 4]
-      when [0, 3, 4]
-      when [1, 2, 3]
-      when [1, 2, 4]
-      when [1, 3, 4]
-      when [2, 3, 4]
-      when [0, 1, 2, 3]
-      when [0, 1, 2, 4]
-      when [0, 1, 3, 4]
-      when [0, 2, 3, 4]
-      when [1, 2, 3, 4]
+        @results[held][:nothing] = find_nothing held
+      when [0, 1, 2],[0, 1, 3],[0, 1, 4],[0, 2, 3],[0, 2, 4],
+           [0, 3, 4],[1, 2, 3],[1, 2, 4],[1, 3, 4], [2, 3, 4]
+        sets = @rules.find_sets held_cards      
+        suit = held_cards[0].suit
+        suit_len = held_cards.count{|card| card.suit == suit}
+        if suit_len != 3
+          @results[held][:royal_flush] = 0
+        else
+          needed = [1,10,11,12,13]
+          held_count = held_cards.count{|card| needed.include? card.rank}
+          discard_count = discarded_cards.count{|card| needed.include? card.rank}
+          if held_count == held.length and discard_count == 0
+            @results[held][:royal_flush] = 2
+          end
+        end   
+        @results[held][:straight_flush]
+        @results[held][:four_of_kind]
+        @results[held][:full_house]
+        # flush test
+        if suit_len != 3
+          @results[held][:flush]=0
+        else          
+          discard_suit_cnt = discarded_cards.count{|card| card.suit == suit}
+          n = 13 - held.length-discard_suit_cnt
+          flush_cnt = choose(n,5-held.length)
+          @results[held][:flush] = flush_cnt - @results[held][:royal_flush] - @results[held][:straight_flush] 
+        end
+        straight_cnt = 0
+        if sets.length == 0
+          #could be possible straights 
+          max = held_cards.max_by{|card| card.rank}.rank
+          min = held_cards.min_by{|card| card.rank}.rank
+          if max-min < 5
+            parts = 5 - (max-min)
+            if min - parts < 0
+              adjusted_parts = parts - (min -parts).abs
+              puts "#{held.to_s} Adjusted - #{adjusted_parts} | parts #{parts}"
+            elsif max + parts > 15
+              adjusted_parts = parts - (max+parts-14)
+              puts "#{held.to_s} Adjusted - #{adjusted_parts} | parts #{parts}"
+            end
+          end          
+        else
+          # no possible straights
+          straight_cnt = 0
+        end
+        @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
+        @results[held][:three_of_kind]
+        @results[held][:two_pair]
+        @results[held][:pair] = 0
+        @results[held][:nothing]
+        @results[held][:nothing] = find_nothing held    
+      when [0, 2, 3, 4] , [0, 1, 3, 4] , [0, 1, 2, 4] , [0, 1, 2, 3] , [1, 2, 3, 4]
+        sets = @rules.find_sets held_cards
+        suit = held_cards[0].suit
+        suit_len = held_cards.count{|card| card.suit == suit}
+        #testing for royal flushes
+        if suit_len != 4
+          @results[held][:royal_flush] = 0
+        else
+          needed = [1,10,11,12,13]
+          held_count = held_cards.count{|card| needed.include? card.rank}
+          discard_count = discarded_cards.count{|card| needed.include? card.rank}
+          if held_count == held.length and discard_count == 0
+            @results[held][:royal_flush] = 1
+          end
+        end        
+        @results[held][:straight_flush]
+        @results[held][:four_of_kind]
+        @results[held][:full_house]
+        # flush test
+        if suit_len != 4
+          @results[held][:flush]=0
+        else
+         if @proposed_hand[discards[0]].suit == suit
+           flush_cnt = 8
+         else
+           flush_cnt = 9
+         end
+         @results[held][:flush] = flush_cnt - @results[held][:royal_flush] - @results[held][:straight_flush] 
+        end
+        straight_cnt = 0
+        if sets.length == 0
+          #could be possible straights 
+          max = held_cards.max_by{|card| card.rank}.rank
+          min = held_cards.min_by{|card| card.rank}.rank
+          if max-min < 5
+            parts = 5 - (max-min)
+            puts "parts #{parts} #{max} #{min}"
+            adjusted_parts = parts
+            if min - parts < 0
+              adjusted_parts = parts - (min -parts).abs
+              puts "Adjusted - #{adjusted_parts}"
+            elsif max + parts > 15
+              adjusted_parts = parts - (max+parts-14)
+              puts "#{held.to_s} Adjusted - #{adjusted_parts} | parts #{parts}"
+            end
+            if min - adjusted > 0            
+              window_index = min - adjusted_parts
+            else
+              window_index = 1
+            end
+            #now make a sliding window containing discards.length
+          end          
+        else
+          # no possible straights
+          straight_cnt = 0
+        end
+        @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
+        @results[held][:three_of_kind]
+        @results[held][:two_pair]
+        @results[held][:pair] = 0
+        @results[held][:nothing]
+        #ra = @results[held].to_a
+        # sum all the winning hands        
+        #total_valued_hands = ra[4...(ra.length)].reduce(0){ |sum,val| sum+val[1]}
+        @results[held][:nothing] = find_nothing held
       when [0, 1, 2, 3, 4]
-        puts "yoyo"
+        # all cards kept, can only be one hand, just need to score it
         result = @rules.score_hand @proposed_hand
-        puts result.to_s
+        #puts result.to_s
         @results[held][result] += 1
-        puts @results
+        #puts @results
     end    
   end
+  def find_nothing held
+    ra = @results[held].to_a
+    # sum all the winning hands        
+    total_valued_hands = ra[4...(ra.length)].reduce(0){ |sum,val| sum+val[1]}
+    @results[held][:total] - total_valued_hands
+  end
+  # def held_cards indices
+    # held = Array.new
+    # indices.each do |i|      
+      # held << @proposed_hand[i]
+    # end
+    # held
+  # end
   def brute_force
       # puts "Starting brute force"
     # @results.each_pair do |hold, cols|
