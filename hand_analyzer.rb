@@ -208,7 +208,7 @@ class HandAnalyzer < Qt::MainWindow
     numerator/denominator
   end
   def count_hands held #held is an array of indices of the held cards in @proposed_hand
-    discards = (0..4).to_a.map{|i| i if not held.include?(i)}.compact
+    discards = (0..4).to_a.map{|i| i if not held.include?(i)}.compact #indices of discarded cards from @proposed_hand
     discarded_cards = discards.map{|i| @proposed_hand[i] }
     held_cards = held.map{|i| @proposed_hand[i] }    
     sorted_held = held_cards.sort{|a,b,|a.rank <=> b.rank}
@@ -272,20 +272,57 @@ class HandAnalyzer < Qt::MainWindow
           flush_cnt = choose(n,5-held.length)
           @results[held][:flush] = flush_cnt - @results[held][:royal_flush] - @results[held][:straight_flush] 
         end
-        straight_cnt = 0
+         straight_cnt = 0
         if sets.length == 0
           #could be possible straights 
           max = held_cards.max_by{|card| card.rank}.rank
           min = held_cards.min_by{|card| card.rank}.rank
+          #determine whether to handle an ace as a 1 or a 14
+          if max > 6
+            i = held_cards.find_index{|card| card.rank == 1}
+            if not i.nil?
+              held_cards[i].rank = 14
+              i = discarded_cards.find_index{|card| card.rank == 1}
+              discarded_cards[i].rank = 14 unless i.nil?
+            end
+          end
           if max-min < 5
             parts = 5 - (max-min)
-            if min - parts < 0
-              adjusted_parts = parts - (min -parts).abs
-              puts "#{held.to_s} Adjusted - #{adjusted_parts} | parts #{parts}"
-            elsif max + parts > 15
-              adjusted_parts = parts - (max+parts-14)
-              puts "#{held.to_s} Adjusted - #{adjusted_parts} | parts #{parts}"
+            #puts "parts #{parts} #{max} #{min}"
+            inside = (max-min+1)-held.length # inside draws
+            outside = discards.length - inside
+            adjusted_parts = parts
+            #need to adjust whether or not the run is at the ends of the hand
+            if min - outside <1
+              adjusted_parts = parts - (1 - (min-outside))
+            elsif max + outside > 14
+              adjusted_parts = parts - (max+outside - 14)
             end
+            # if min - outside < 0
+              # adjusted_parts = parts - (min -parts).abs
+              # #puts "Adjusted - #{adjusted_parts}"
+            # elsif max + parts > 15
+              # adjusted_parts = parts - (max+parts-14)
+            # #  puts "#{held.to_s} Adjusted - #{adjusted_parts} | parts #{parts}"
+            # end            
+            if min - adjusted_parts > 0            
+              window_rank = min - adjusted_parts
+            else
+              window_rank = 1
+            end
+            #now make a sliding window containing discards.length
+            used_parts = 0
+            straight_cnt = 1
+            puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_rank} | parts #{parts} | adjusted #{adjusted_parts} | inside #{inside} | outside #{outside}"
+            begin
+              if held_cards.find_index{|card| card.rank == window_rank}.nil?
+                straight_cnt *= 4-discarded_cards.count{|card| card.rank == window_rank}
+                dis_cnt = discarded_cards.count{|card| card.rank == window_rank}
+                #puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_rank} | parts #{parts} | adjusted #{adjusted_parts} | discnt #{dis_cnt} | inside #{inside} | outside #{outside}"
+                used_parts += 1
+              end
+              window_rank += 1
+            end while used_parts < adjusted_parts
           end          
         else
           # no possible straights
@@ -333,21 +370,34 @@ class HandAnalyzer < Qt::MainWindow
           min = held_cards.min_by{|card| card.rank}.rank
           if max-min < 5
             parts = 5 - (max-min)
-            puts "parts #{parts} #{max} #{min}"
+            #puts "parts #{parts} #{max} #{min}"
+            inside = (max-min+1)-held.length # inside draws
+            outside = discards.length - inside
             adjusted_parts = parts
             if min - parts < 0
               adjusted_parts = parts - (min -parts).abs
-              puts "Adjusted - #{adjusted_parts}"
+              #puts "Adjusted - #{adjusted_parts}"
             elsif max + parts > 15
               adjusted_parts = parts - (max+parts-14)
-              puts "#{held.to_s} Adjusted - #{adjusted_parts} | parts #{parts}"
-            end
-            if min - adjusted > 0            
-              window_index = min - adjusted_parts
+            #  puts "#{held.to_s} Adjusted - #{adjusted_parts} | parts #{parts}"
+            end            
+            if min - adjusted_parts > 0            
+              window_rank = min - adjusted_parts
             else
-              window_index = 1
+              window_rank = 1
             end
             #now make a sliding window containing discards.length
+            used_parts = 0
+            straight_cnt = 1
+            begin
+              if held_cards.find_index{|card| card.rank == window_rank}.nil?
+                straight_cnt *= 4-discarded_cards.count{|card| card.rank == window_rank}
+                dis_cnt = discarded_cards.count{|card| card.rank == window_rank}
+                puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_rank} | parts #{parts} | adjusted #{adjusted_parts} | discnt #{dis_cnt} | inside #{inside}"
+                used_parts += 1
+              end
+              window_rank += 1
+            end while used_parts < adjusted_parts
           end          
         else
           # no possible straights
