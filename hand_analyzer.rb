@@ -250,6 +250,7 @@ class HandAnalyzer < Qt::MainWindow
         sets = @rules.find_sets held_cards      
         suit = held_cards[0].suit
         suit_len = held_cards.count{|card| card.suit == suit}
+        #royal flush test
         if suit_len != 3
           @results[held][:royal_flush] = 0
         else
@@ -259,11 +260,12 @@ class HandAnalyzer < Qt::MainWindow
           if held_count == held.length and discard_count == 0
             @results[held][:royal_flush] = 2
           end
-        end   
-        @results[held][:straight_flush]
+        end
+        @results[held][:straight_flush] = count_straights held, held_cards, discards, discarded_cards, sets, true
         @results[held][:four_of_kind]
         @results[held][:full_house]
         # flush test
+        puts "#{held.to_s} suit len #{suit_len}"
         if suit_len != 3
           @results[held][:flush]=0
         else          
@@ -272,62 +274,80 @@ class HandAnalyzer < Qt::MainWindow
           flush_cnt = choose(n,5-held.length)
           @results[held][:flush] = flush_cnt - @results[held][:royal_flush] - @results[held][:straight_flush] 
         end
-         straight_cnt = 0
-        if sets.length == 0
-          #could be possible straights 
-          max = held_cards.max_by{|card| card.rank}.rank
-          min = held_cards.min_by{|card| card.rank}.rank
-          #determine whether to handle an ace as a 1 or a 14
-          if max > 6
-            i = held_cards.find_index{|card| card.rank == 1}
-            if not i.nil?
-              held_cards[i].rank = 14
-              i = discarded_cards.find_index{|card| card.rank == 1}
-              discarded_cards[i].rank = 14 unless i.nil?
-            end
-          end
-          if max-min < 5
-            parts = 5 - (max-min)
-            #puts "parts #{parts} #{max} #{min}"
-            inside = (max-min+1)-held.length # inside draws
-            outside = discards.length - inside
-            adjusted_parts = parts
-            #need to adjust whether or not the run is at the ends of the hand
-            if min - outside <1
-              adjusted_parts = parts - (1 - (min-outside))
-            elsif max + outside > 14
-              adjusted_parts = parts - (max+outside - 14)
-            end
-            # if min - outside < 0
-              # adjusted_parts = parts - (min -parts).abs
-              # #puts "Adjusted - #{adjusted_parts}"
-            # elsif max + parts > 15
-              # adjusted_parts = parts - (max+parts-14)
-            # #  puts "#{held.to_s} Adjusted - #{adjusted_parts} | parts #{parts}"
-            # end            
-            if min - adjusted_parts > 0            
-              window_rank = min - adjusted_parts
-            else
-              window_rank = 1
-            end
-            #now make a sliding window containing discards.length
-            used_parts = 0
-            straight_cnt = 1
-            puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_rank} | parts #{parts} | adjusted #{adjusted_parts} | inside #{inside} | outside #{outside}"
-            begin
-              if held_cards.find_index{|card| card.rank == window_rank}.nil?
-                straight_cnt *= 4-discarded_cards.count{|card| card.rank == window_rank}
-                dis_cnt = discarded_cards.count{|card| card.rank == window_rank}
-                #puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_rank} | parts #{parts} | adjusted #{adjusted_parts} | discnt #{dis_cnt} | inside #{inside} | outside #{outside}"
-                used_parts += 1
-              end
-              window_rank += 1
-            end while used_parts < adjusted_parts
-          end          
-        else
-          # no possible straights
-          straight_cnt = 0
-        end
+        #straight test
+        discards 
+        discarded_cards
+        held_cards     
+        sorted_held  
+        
+        straight_cnt = count_straights held, held_cards, discards, discarded_cards, sets, false 
+        # straight_cnt = 0
+        # if sets.length == 0
+          # #could be possible straights 
+          # max = held_cards.max_by{|card| card.rank}.rank
+          # min = held_cards.min_by{|card| card.rank}.rank
+          # #determine whether to handle an ace as a 1 or a 14
+          # if max > 6
+            # i = held_cards.find_index{|card| card.rank == 1}
+            # if not i.nil?
+              # held_cards[i].rank = 14
+              # i = discarded_cards.find_index{|card| card.rank == 1}
+              # discarded_cards[i].rank = 14 unless i.nil?
+            # end
+          # end
+          # if max-min < 5
+            # parts = 5 - (max-min)
+            # #puts "parts #{parts} #{max} #{min}"
+            # inside = (max-min+1)-held.length # inside draws
+            # outside = discards.length - inside
+            # adjusted_parts = parts
+            # #need to adjust whether or not the run is at the ends of the hand
+            # if min - outside <1
+              # adjusted_parts = parts - (1 - (min-outside))
+            # elsif max + outside > 14
+              # adjusted_parts = parts - (max+outside - 14)
+            # end         
+            # if min - outside > 0            
+              # window_base_rank = min - outside
+            # else
+              # window_base_rank = 1
+            # end
+            # #now make a sliding window containing discards.length
+            # used_parts = 0
+            # straight_cnt = 0
+            # puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_base_rank} | parts #{parts} | adjusted #{adjusted_parts} | inside #{inside} | outside #{outside}"
+            # begin
+              # chosen = 0
+              # until held_cards.find_index{|card| card.rank==window_base_rank}.nil?
+                # window_base_rank += 1
+              # end
+              # straight_cards = [window_base_rank]
+              # while straight_cards.length < discards.length
+                # test = straight_cards.last + 1
+                # until held_cards.find_index{|card| card.rank==test}.nil?
+                  # test += 1
+                # end
+                # straight_cards << test
+              # end
+              # puts straight_cards.to_s
+              # straight_cnt_this_window = 1
+              # straight_cards.each do |straight_card|              
+                # if held_cards.find_index{|card| card.rank == straight_card}.nil?
+                  # straight_cnt_this_window *= 4-discarded_cards.count{|card| card.rank == straight_card}
+                  # dis_cnt = discarded_cards.count{|card| card.rank == window_base_rank}
+                  # puts dis_cnt
+                  # #puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_rank} | parts #{parts} | adjusted #{adjusted_parts} | discnt #{dis_cnt} | inside #{inside} | outside #{outside}"                
+                # end
+              # end
+              # straight_cnt += straight_cnt_this_window
+              # window_base_rank += 1
+              # used_parts += 1
+            # end while used_parts < adjusted_parts
+          # end          
+        # else
+          # # no possible straights
+          # straight_cnt = 0
+        # end
         @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
         @results[held][:three_of_kind]
         @results[held][:two_pair]
@@ -349,7 +369,7 @@ class HandAnalyzer < Qt::MainWindow
             @results[held][:royal_flush] = 1
           end
         end        
-        @results[held][:straight_flush]
+        @results[held][:straight_flush] = count_straights held, held_cards, discards, discarded_cards, sets, true 
         @results[held][:four_of_kind]
         @results[held][:full_house]
         # flush test
@@ -363,46 +383,74 @@ class HandAnalyzer < Qt::MainWindow
          end
          @results[held][:flush] = flush_cnt - @results[held][:royal_flush] - @results[held][:straight_flush] 
         end
-        straight_cnt = 0
-        if sets.length == 0
-          #could be possible straights 
-          max = held_cards.max_by{|card| card.rank}.rank
-          min = held_cards.min_by{|card| card.rank}.rank
-          if max-min < 5
-            parts = 5 - (max-min)
-            #puts "parts #{parts} #{max} #{min}"
-            inside = (max-min+1)-held.length # inside draws
-            outside = discards.length - inside
-            adjusted_parts = parts
-            if min - parts < 0
-              adjusted_parts = parts - (min -parts).abs
-              #puts "Adjusted - #{adjusted_parts}"
-            elsif max + parts > 15
-              adjusted_parts = parts - (max+parts-14)
-            #  puts "#{held.to_s} Adjusted - #{adjusted_parts} | parts #{parts}"
-            end            
-            if min - adjusted_parts > 0            
-              window_rank = min - adjusted_parts
-            else
-              window_rank = 1
-            end
-            #now make a sliding window containing discards.length
-            used_parts = 0
-            straight_cnt = 1
-            begin
-              if held_cards.find_index{|card| card.rank == window_rank}.nil?
-                straight_cnt *= 4-discarded_cards.count{|card| card.rank == window_rank}
-                dis_cnt = discarded_cards.count{|card| card.rank == window_rank}
-                puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_rank} | parts #{parts} | adjusted #{adjusted_parts} | discnt #{dis_cnt} | inside #{inside}"
-                used_parts += 1
-              end
-              window_rank += 1
-            end while used_parts < adjusted_parts
-          end          
-        else
-          # no possible straights
-          straight_cnt = 0
-        end
+        straight_cnt = count_straights held, held_cards, discards, discarded_cards, sets, false 
+        # straight_cnt = 0
+        # if sets.length == 0
+          # #could be possible straights 
+          # max = held_cards.max_by{|card| card.rank}.rank
+          # min = held_cards.min_by{|card| card.rank}.rank
+          # #determine whether to handle an ace as a 1 or a 14
+          # if max > 6
+            # i = held_cards.find_index{|card| card.rank == 1}
+            # if not i.nil?
+              # held_cards[i].rank = 14
+              # i = discarded_cards.find_index{|card| card.rank == 1}
+              # discarded_cards[i].rank = 14 unless i.nil?
+            # end
+          # end
+          # if max-min < 5
+            # parts = 5 - (max-min)
+            # #puts "parts #{parts} #{max} #{min}"
+            # inside = (max-min+1)-held.length # inside draws
+            # outside = discards.length - inside
+            # adjusted_parts = parts
+            # #need to adjust whether or not the run is at the ends of the hand
+            # if min - outside <1
+              # adjusted_parts = parts - (1 - (min-outside))
+            # elsif max + outside > 14
+              # adjusted_parts = parts - (max+outside - 14)
+            # end         
+            # if min - outside > 0            
+              # window_base_rank = min - outside
+            # else
+              # window_base_rank = 1
+            # end
+            # #now make a sliding window containing discards.length
+            # used_parts = 0
+            # straight_cnt = 0
+            # puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_base_rank} | parts #{parts} | adjusted #{adjusted_parts} | inside #{inside} | outside #{outside}"
+            # begin
+              # chosen = 0
+              # until held_cards.find_index{|card| card.rank==window_base_rank}.nil?
+                # window_base_rank += 1
+              # end
+              # straight_cards = [window_base_rank]
+              # while straight_cards.length < discards.length
+                # test = straight_cards.last + 1
+                # until held_cards.find_index{|card| card.rank==test}.nil?
+                  # test += 1
+                # end
+                # straight_cards << test
+              # end
+              # puts straight_cards.to_s
+              # straight_cnt_this_window = 1
+              # straight_cards.each do |straight_card|              
+                # if held_cards.find_index{|card| card.rank == straight_card}.nil?
+                  # straight_cnt_this_window *= 4-discarded_cards.count{|card| card.rank == straight_card}
+                  # dis_cnt = discarded_cards.count{|card| card.rank == straight_card}
+                  # #puts "dis #{dis_cnt} | straight_cnt_this_window #{straight_cnt_this_window}"
+                  # #puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_rank} | parts #{parts} | adjusted #{adjusted_parts} | discnt #{dis_cnt} | inside #{inside} | outside #{outside}"                
+                # end
+              # end
+              # straight_cnt += straight_cnt_this_window
+              # window_base_rank += 1
+              # used_parts += 1
+            # end while used_parts < adjusted_parts
+          # end          
+        # else
+          # # no possible straights
+          # straight_cnt = 0
+        # end
         @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
         @results[held][:three_of_kind]
         @results[held][:two_pair]
@@ -419,6 +467,89 @@ class HandAnalyzer < Qt::MainWindow
         @results[held][result] += 1
         #puts @results
     end    
+  end
+  def count_straights held, held_cards, discards, discarded_cards, sets, test_straight_flush=false
+    straight_cnt = 0
+    if test_straight_flush
+      suit = held_cards[0].suit
+      if held_cards.count{|card|card.suit = suit} != held_cards.length #if all held cards aren't the same suit
+        return 0
+      end
+    end
+    if sets.length == 0
+      #could be possible straights 
+      max = held_cards.max_by{|card| card.rank}.rank
+      min = held_cards.min_by{|card| card.rank}.rank
+      #determine whether to handle an ace as a 1 or a 14
+      if max > 6
+        i = held_cards.find_index{|card| card.rank == 1}
+        if not i.nil?
+          held_cards[i].rank = 14
+          i = discarded_cards.find_index{|card| card.rank == 1}
+          discarded_cards[i].rank = 14 unless i.nil?
+        end
+      end
+      if max-min < 5
+        parts = 5 - (max-min)
+        #puts "parts #{parts} #{max} #{min}"
+        inside = (max-min+1)-held.length # inside draws
+        outside = discards.length - inside
+        adjusted_parts = parts
+        #need to adjust whether or not the run is at the ends of the hand
+        if min - outside <1
+          adjusted_parts = parts - (1 - (min-outside))
+        elsif max + outside > 14
+          adjusted_parts = parts - (max+outside - 14)
+        end         
+        if min - outside > 0            
+          window_base_rank = min - outside
+        else
+          window_base_rank = 1
+        end
+        #now make a sliding window containing discards.length
+        used_parts = 0
+        straight_cnt = 0
+   #     puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_base_rank} | parts #{parts} | adjusted #{adjusted_parts} | inside #{inside} | outside #{outside}"
+        begin
+          chosen = 0
+          until held_cards.find_index{|card| card.rank==window_base_rank}.nil?
+            window_base_rank += 1
+          end
+          straight_cards = [window_base_rank]
+          while straight_cards.length < discards.length
+            test = straight_cards.last + 1
+            until held_cards.find_index{|card| card.rank==test}.nil?
+              test += 1
+            end
+            straight_cards << test
+          end
+    #      puts straight_cards.to_s
+          straight_cnt_this_window = 1
+          straight_cards.each do |straight_card|              
+            if held_cards.find_index{|card| card.rank == straight_card}.nil?
+              if test_straight_flush
+                # see if a card was thrown away
+                cnt = 1-discarded_cards.count{|card| card.rank==straight_card and card.suit==suit}
+                cnt *= 1-held_cards.count{|card| card.rank==straight_card and card.suit==suit}
+                straight_cnt_this_window *= 1-cnt
+              else
+                 straight_cnt_this_window *= 4-discarded_cards.count{|card| card.rank == straight_card}
+              end
+              dis_cnt = discarded_cards.count{|card| card.rank==straight_card and card.suit==suit}              
+     #         puts "#{dis_cnt} dis " 
+              #puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_rank} | parts #{parts} | adjusted #{adjusted_parts} | discnt #{dis_cnt} | inside #{inside} | outside #{outside}"                
+            end
+          end
+          straight_cnt += straight_cnt_this_window
+          window_base_rank += 1
+          used_parts += 1
+        end while used_parts < adjusted_parts
+      end          
+    else
+      # no possible straights
+      straight_cnt = 0
+    end
+    return straight_cnt
   end
   def find_nothing held
     ra = @results[held].to_a
