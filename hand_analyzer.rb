@@ -249,6 +249,9 @@ class HandAnalyzer < Qt::MainWindow
            [0, 3, 4],[1, 2, 3],[1, 2, 4],[1, 3, 4], [2, 3, 4]
         sets = @rules.find_sets held_cards      
         suit = held_cards[0].suit
+        a = []
+        held_cards.each {|card| a << card.suit}
+        puts a.to_s
         suit_len = held_cards.count{|card| card.suit == suit}
         #royal flush test
         if suit_len != 3
@@ -275,11 +278,7 @@ class HandAnalyzer < Qt::MainWindow
           @results[held][:flush] = flush_cnt - @results[held][:royal_flush] - @results[held][:straight_flush] 
         end
         #straight test
-        discards 
-        discarded_cards
-        held_cards     
-        sorted_held  
-        
+            
         straight_cnt = count_straights held, held_cards, discards, discarded_cards, sets, false 
         # straight_cnt = 0
         # if sets.length == 0
@@ -349,6 +348,17 @@ class HandAnalyzer < Qt::MainWindow
           # straight_cnt = 0
         # end
         @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
+        # three of a kind
+        held_sets = @rules.find_sets(held_cards)
+        discard_sets = @rules.find_sets(discarded_cards)
+        # two ways to make sets
+        # 1. make sets of of cards that are held
+        # 2. make sets off of drawn cards. - in this case, drawing 2, so can't draw 3 of k's
+        three_k_cnt = 0
+        @held_sets.each do |set|
+          dis = discard_sets.select{|ds| ds[0] == set[0]}
+          left_in_deck = 4-set.length-dis.length
+        end
         @results[held][:three_of_kind]
         @results[held][:two_pair]
         @results[held][:pair] = 0
