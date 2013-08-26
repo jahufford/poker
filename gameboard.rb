@@ -411,7 +411,7 @@ class Gameboard < Qt::Object
     # cards = mocked_hand hand, [12,9,2,2,11],[:diamond,:diamond,:club,:diamond,:diamond] #royal flush
     # @rules.score_hand cards
     #cards = mocked_hand hand, [10,11,12,13,1],[:heart,:heart,:heart,:heart,:heart] #royal flush
-    #@cards = mocked_hand hand, [10,1,1,13,11],[:heart,:heart,:club,:heart,:heart]
+    #@cards = mocked_hand hand, [3,4,5,7,7],[:club,:diamond,:heart,:spade,:heart]
     #puts @rules.score_hand(cards).to_s    
     #puts "----"
     #pc cards

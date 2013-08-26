@@ -214,37 +214,30 @@ class HandAnalyzer < Qt::MainWindow
     sorted_held = held_cards.sort{|a,b,|a.rank <=> b.rank}
     case held
       when []
+        three_k_cnt = 0
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+        left_in_deck.each_pair do |rank, num|
+          three_k_cnt += choose(num,3);
+        end
+        @results[held][:three_of_kind] = three_k_cnt
         @results[held][:nothing] = find_nothing held
-      when [0]
+      when [0],[1],[2],[3],[4]
         @results[held][:nothing] = find_nothing held
-      when [1]
-        @results[held][:nothing] = find_nothing held
-      when [2]
-        @results[held][:nothing] = find_nothing held
-      when [3]
-        @results[held][:nothing] = find_nothing held
-      when [4]
-        @results[held][:nothing] = find_nothing held
-      when [0, 1]
-        @results[held][:nothing] = find_nothing held
-      when [0, 2]
-        @results[held][:nothing] = find_nothing held
-      when [0, 3]
-        @results[held][:nothing] = find_nothing held
-      when [0, 4]
-        @results[held][:nothing] = find_nothing held
-      when [1, 2]
-        @results[held][:nothing] = find_nothing held
-      when [1, 3]
-        @results[held][:nothing] = find_nothing held
-      when [1, 4]
-        @results[held][:nothing] = find_nothing held
-      when [2, 3]
-        @results[held][:nothing] = find_nothing held
-      when [2, 4]
-        @results[held][:nothing] = find_nothing held
-      when [3, 4]
-        @results[held][:nothing] = find_nothing held
+      when [0, 1],[0,2],[0,3],[0,4],[1,2],[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]
+        @results[held][:nothing] = find_nothing held      
       when [0, 1, 2],[0, 1, 3],[0, 1, 4],[0, 2, 3],[0, 2, 4],
            [0, 3, 4],[1, 2, 3],[1, 2, 4],[1, 3, 4], [2, 3, 4]
         sets = @rules.find_sets held_cards      
@@ -355,11 +348,33 @@ class HandAnalyzer < Qt::MainWindow
         # 1. make sets of of cards that are held
         # 2. make sets off of drawn cards. - in this case, drawing 2, so can't draw 3 of k's
         three_k_cnt = 0
-        @held_sets.each do |set|
-          dis = discard_sets.select{|ds| ds[0] == set[0]}
-          left_in_deck = 4-set.length-dis.length
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
         end
-        @results[held][:three_of_kind]
+        # puts h_cnt.to_s
+        # puts d_cnt.to_s
+        # puts left_in_deck.to_s
+        #from cards that are held0
+        h_cnt.each_pair do |key,value|
+          need_to_draw = 3 - value
+          num_to_draw = discards.length
+          next if num_to_draw < need_to_draw
+          target = choose(left_in_deck[key], need_to_draw)
+          three_k_cnt += target
+          need_to_draw -= target
+        end
+        @results[held][:three_of_kind] = three_k_cnt
         @results[held][:two_pair]
         @results[held][:pair] = 0
         @results[held][:nothing]
@@ -473,7 +488,7 @@ class HandAnalyzer < Qt::MainWindow
       when [0, 1, 2, 3, 4]
         # all cards kept, can only be one hand, just need to score it
         result = @rules.score_hand @proposed_hand
-        #puts result.to_s
+        puts result.to_s
         @results[held][result] += 1
         #puts @results
     end    
@@ -482,7 +497,7 @@ class HandAnalyzer < Qt::MainWindow
     straight_cnt = 0
     if test_straight_flush
       suit = held_cards[0].suit
-      if held_cards.count{|card|card.suit = suit} != held_cards.length #if all held cards aren't the same suit
+      if held_cards.count{|card|card.suit == suit} != held_cards.length #if all held cards aren't the same suit
         return 0
       end
     end
