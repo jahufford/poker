@@ -214,6 +214,35 @@ class HandAnalyzer < Qt::MainWindow
     sorted_held = held_cards.sort{|a,b,|a.rank <=> b.rank}
     case held
       when []
+        # four of a kind test
+        four_k_cnt = 0
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+              
+        # no cards held,  draw the 4 of a kind
+        sum = 0
+        left_in_deck.each_pair do |rank, num|
+          next if num<4
+          cards = left_in_deck.dup
+          cards.delete(rank)
+          sum += choose(num,4)*draw_no_duples(1,cards)
+        end
+        
+        four_k_cnt = sum 
+        @results[held][:four_of_kind] = four_k_cnt
+        
         three_k_cnt = 0
         h_cnt = Hash.new
         d_cnt = Hash.new
@@ -229,14 +258,227 @@ class HandAnalyzer < Qt::MainWindow
             left_in_deck[rank] -= d_cnt[rank]
           end
         end
+        
+        sum = 0
         left_in_deck.each_pair do |rank, num|
-          three_k_cnt += choose(num,3);
+          next if num<3
+          cards = left_in_deck.dup
+          cards.delete(rank)
+          sum += choose(num,3)*draw_no_duples(2,cards)
         end
+        puts sum
+        three_k_cnt += sum
+           
         @results[held][:three_of_kind] = three_k_cnt
         @results[held][:nothing] = find_nothing held
       when [0],[1],[2],[3],[4]
+        # four of a kind test
+        four_k_cnt = 0
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+              
+        # 1 card held,  to draw, make four of a kind from held cards 
+        max_hand_set = h_cnt.max_by{|item| item[1]} #items are [rank,num_in_hand]
+        sum = 0
+        left_in_deck_minus_hand = left_in_deck.dup
+        h_cnt.each_pair do |rank,num|
+          left_in_deck_minus_hand.delete(rank)
+        end        
+        h_cnt.each_pair do |rank,num|
+          to_draw = 4
+          next if num != max_hand_set[1]
+          n = left_in_deck[rank]
+          r = 4-num
+          to_draw -= r              
+          sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)              
+        end
+        
+        # draw the 4 of a kind
+        if max_hand_set[1] == 1 # can't draw three of kind if you already have a pair, b/c it'd be a FH
+         left_in_deck_minus_hand.each_pair do |rank, num|
+           sum += choose(num,4)
+          end
+        end
+        
+        four_k_cnt = sum 
+        @results[held][:four_of_kind] = four_k_cnt
+        
+        # three of a kind test
+        three_k_cnt = 0
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+              
+        #1 card held, 4 to draw, make three of a kind from held cards 
+        max_hand_set = h_cnt.max_by{|item| item[1]} #items are [rank,num_in_hand]
+        sum = 0
+        left_in_deck_minus_hand = left_in_deck.dup
+        h_cnt.each_pair do |rank,num|
+          left_in_deck_minus_hand.delete(rank)
+        end        
+        h_cnt.each_pair do |rank,num|
+          to_draw = 4
+          next if num != max_hand_set[1]
+          n = left_in_deck[rank]
+          r = 3-num
+          to_draw -= r              
+          sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)              
+        end
+        puts "-----"
+        puts sum
+        # draw the 3 of a kind
+        if max_hand_set[1] == 1 # can't draw three of kind if you already have a pair, b/c it'd be a FH
+          left_in_deck_minus_hand.each_pair do |rank, num|
+            cards = left_in_deck_minus_hand.dup
+            cards.delete(rank)
+            sum += choose(num,3)*draw_no_duples(1, cards)
+          end
+        end
+        puts sum
+        puts "-----"
+        three_k_cnt = sum
+        @results[held][:three_of_kind] = three_k_cnt
         @results[held][:nothing] = find_nothing held
       when [0, 1],[0,2],[0,3],[0,4],[1,2],[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]
+        sets = @rules.find_sets held_cards
+        suit = held_cards[0].suit
+        suit_len = held_cards.count{|card| card.suit == suit}
+        #testing for royal flushes
+        if suit_len != 2
+          @results[held][:royal_flush] = 0
+        else
+          needed = [1,10,11,12,13]
+          held_count = held_cards.count{|card| needed.include? card.rank}
+          discard_count = discarded_cards.count{|card| (needed.include? card.rank) && (card.suit == suit)}
+          if held_count == held.length and discard_count == 0
+            @results[held][:royal_flush] = 1
+          end
+        end        
+        @results[held][:straight_flush] = (count_straights held, held_cards, discards, discarded_cards, sets, true) - @results[held][:royal_flush]
+        
+        # four of a kind test
+        four_k_cnt = 0
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+              
+        #2 cards held,  to draw, make four of a kind from held cards 
+        max_hand_set = h_cnt.max_by{|item| item[1]} #items are [rank,num_in_hand]
+        sum = 0
+        left_in_deck_minus_hand = left_in_deck.dup
+        h_cnt.each_pair do |rank,num|
+          left_in_deck_minus_hand.delete(rank)
+        end        
+        h_cnt.each_pair do |rank,num|
+          to_draw = 3
+          next if num != max_hand_set[1]
+          n = left_in_deck[rank]
+          r = 4-num
+          to_draw -= r              
+          sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)              
+        end
+        
+        # # draw the 3 of a kind
+        # if max_hand_set[1] == 1 # can't draw three of kind if you already have a pair, b/c it'd be a FH
+          # left_in_deck_minus_hand.each_pair do |rank, num|
+            # sum += choose(num,3)
+          # end
+        # end
+        
+        
+        four_k_cnt = sum 
+        @results[held][:four_of_kind] = four_k_cnt
+        @results[held][:full_house]
+        # flush test
+        puts "#{held.to_s} suit len #{suit_len}"
+        if suit_len != 2
+          @results[held][:flush]=0
+        else          
+          discard_suit_cnt = discarded_cards.count{|card| card.suit == suit}
+          n = 13 - held.length-discard_suit_cnt
+          flush_cnt = choose(n,5-held.length)
+          @results[held][:flush] = flush_cnt - @results[held][:royal_flush] - @results[held][:straight_flush] 
+        end
+        
+        straight_cnt = count_straights held, held_cards, discards, discarded_cards, sets, false        
+        @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
+        
+        three_k_cnt = 0
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+              
+        #2 cards held,  to draw, make three of a kind from held cards 
+        max_hand_set = h_cnt.max_by{|item| item[1]} #items are [rank,num_in_hand]
+        sum = 0
+        left_in_deck_minus_hand = left_in_deck.dup
+        h_cnt.each_pair do |rank,num|
+          left_in_deck_minus_hand.delete(rank)
+        end        
+        h_cnt.each_pair do |rank,num|
+          to_draw = 3
+          next if num != max_hand_set[1]
+          n = left_in_deck[rank]
+          r = 3-num
+          to_draw -= r              
+          sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)              
+        end
+        
+        # draw the 3 of a kind
+        if max_hand_set[1] == 1 # can't draw three of kind if you already have a pair, b/c it'd be a FH
+          left_in_deck_minus_hand.each_pair do |rank, num|
+            sum += choose(num,3)
+          end
+        end
+        
+        
+        three_k_cnt = sum
+        @results[held][:three_of_kind] = three_k_cnt
         @results[held][:nothing] = find_nothing held      
       when [0, 1, 2],[0, 1, 3],[0, 1, 4],[0, 2, 3],[0, 2, 4],
            [0, 3, 4],[1, 2, 3],[1, 2, 4],[1, 3, 4], [2, 3, 4]
@@ -252,13 +494,55 @@ class HandAnalyzer < Qt::MainWindow
         else
           needed = [1,10,11,12,13]
           held_count = held_cards.count{|card| needed.include? card.rank}
-          discard_count = discarded_cards.count{|card| needed.include? card.rank}
+          discard_count = discarded_cards.count{|card| (needed.include? card.rank) && (card.suit == suit) }
           if held_count == held.length and discard_count == 0
-            @results[held][:royal_flush] = 2
+            @results[held][:royal_flush] = 1
           end
         end
         @results[held][:straight_flush] = count_straights held, held_cards, discards, discarded_cards, sets, true
-        @results[held][:four_of_kind]
+          # four of a kind test
+        four_k_cnt = 0
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+              
+        #2 cards held,  to draw, make four of a kind from held cards 
+        max_hand_set = h_cnt.max_by{|item| item[1]} #items are [rank,num_in_hand]
+        sum = 0
+        left_in_deck_minus_hand = left_in_deck.dup
+        h_cnt.each_pair do |rank,num|
+          left_in_deck_minus_hand.delete(rank)
+        end        
+        h_cnt.each_pair do |rank,num|
+          to_draw = 2
+          next if num != max_hand_set[1]
+          n = left_in_deck[rank]
+          r = 4-num
+          to_draw -= r              
+          sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)              
+        end
+        
+        # # draw the 3 of a kind
+        # if max_hand_set[1] == 1 # can't draw three of kind if you already have a pair, b/c it'd be a FH
+          # left_in_deck_minus_hand.each_pair do |rank, num|
+            # sum += choose(num,3)
+          # end
+        # end
+        
+        
+        four_k_cnt = sum 
+        @results[held][:four_of_kind] = four_k_cnt        
         @results[held][:full_house]
         # flush test
         puts "#{held.to_s} suit len #{suit_len}"
@@ -362,18 +646,24 @@ class HandAnalyzer < Qt::MainWindow
             left_in_deck[rank] -= d_cnt[rank]
           end
         end
-        # puts h_cnt.to_s
-        # puts d_cnt.to_s
-        # puts left_in_deck.to_s
-        #from cards that are held0
-        h_cnt.each_pair do |key,value|
-          need_to_draw = 3 - value
-          num_to_draw = discards.length
-          next if num_to_draw < need_to_draw
-          target = choose(left_in_deck[key], need_to_draw)
-          three_k_cnt += target
-          need_to_draw -= target
+              
+        #3 cards held, only 2 to draw, so can only make 3 of kinds from held cards
+        max_hand_set = h_cnt.max_by{|item| item[1]} #items are [rank,num_in_hand]
+        sum = 0
+        left_in_deck_minus_hand = left_in_deck.dup
+        h_cnt.each_pair do |rank,num|
+          left_in_deck_minus_hand.delete(rank)
+        end        
+        h_cnt.each_pair do |rank,num|
+          to_draw = 2
+          next if num != max_hand_set[1]
+              n = left_in_deck[rank]
+              r = 3-num
+              to_draw -= r              
+              sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)              
         end
+        
+        three_k_cnt = sum
         @results[held][:three_of_kind] = three_k_cnt
         @results[held][:two_pair]
         @results[held][:pair] = 0
@@ -389,7 +679,7 @@ class HandAnalyzer < Qt::MainWindow
         else
           needed = [1,10,11,12,13]
           held_count = held_cards.count{|card| needed.include? card.rank}
-          discard_count = discarded_cards.count{|card| needed.include? card.rank}
+          discard_count = discarded_cards.count{|card| (needed.include? card.rank) && (card.suit == suit)}
           if held_count == held.length and discard_count == 0
             @results[held][:royal_flush] = 1
           end
@@ -408,76 +698,50 @@ class HandAnalyzer < Qt::MainWindow
          end
          @results[held][:flush] = flush_cnt - @results[held][:royal_flush] - @results[held][:straight_flush] 
         end
-        straight_cnt = count_straights held, held_cards, discards, discarded_cards, sets, false 
-        # straight_cnt = 0
-        # if sets.length == 0
-          # #could be possible straights 
-          # max = held_cards.max_by{|card| card.rank}.rank
-          # min = held_cards.min_by{|card| card.rank}.rank
-          # #determine whether to handle an ace as a 1 or a 14
-          # if max > 6
-            # i = held_cards.find_index{|card| card.rank == 1}
-            # if not i.nil?
-              # held_cards[i].rank = 14
-              # i = discarded_cards.find_index{|card| card.rank == 1}
-              # discarded_cards[i].rank = 14 unless i.nil?
-            # end
-          # end
-          # if max-min < 5
-            # parts = 5 - (max-min)
-            # #puts "parts #{parts} #{max} #{min}"
-            # inside = (max-min+1)-held.length # inside draws
-            # outside = discards.length - inside
-            # adjusted_parts = parts
-            # #need to adjust whether or not the run is at the ends of the hand
-            # if min - outside <1
-              # adjusted_parts = parts - (1 - (min-outside))
-            # elsif max + outside > 14
-              # adjusted_parts = parts - (max+outside - 14)
-            # end         
-            # if min - outside > 0            
-              # window_base_rank = min - outside
-            # else
-              # window_base_rank = 1
-            # end
-            # #now make a sliding window containing discards.length
-            # used_parts = 0
-            # straight_cnt = 0
-            # puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_base_rank} | parts #{parts} | adjusted #{adjusted_parts} | inside #{inside} | outside #{outside}"
-            # begin
-              # chosen = 0
-              # until held_cards.find_index{|card| card.rank==window_base_rank}.nil?
-                # window_base_rank += 1
-              # end
-              # straight_cards = [window_base_rank]
-              # while straight_cards.length < discards.length
-                # test = straight_cards.last + 1
-                # until held_cards.find_index{|card| card.rank==test}.nil?
-                  # test += 1
-                # end
-                # straight_cards << test
-              # end
-              # puts straight_cards.to_s
-              # straight_cnt_this_window = 1
-              # straight_cards.each do |straight_card|              
-                # if held_cards.find_index{|card| card.rank == straight_card}.nil?
-                  # straight_cnt_this_window *= 4-discarded_cards.count{|card| card.rank == straight_card}
-                  # dis_cnt = discarded_cards.count{|card| card.rank == straight_card}
-                  # #puts "dis #{dis_cnt} | straight_cnt_this_window #{straight_cnt_this_window}"
-                  # #puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_rank} | parts #{parts} | adjusted #{adjusted_parts} | discnt #{dis_cnt} | inside #{inside} | outside #{outside}"                
-                # end
-              # end
-              # straight_cnt += straight_cnt_this_window
-              # window_base_rank += 1
-              # used_parts += 1
-            # end while used_parts < adjusted_parts
-          # end          
-        # else
-          # # no possible straights
-          # straight_cnt = 0
-        # end
+        straight_cnt = count_straights held, held_cards, discards, discarded_cards, sets, false        
         @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
-        @results[held][:three_of_kind]
+        
+        # 3 of kind test
+        held_sets = @rules.find_sets(held_cards)
+        discard_sets = @rules.find_sets(discarded_cards)
+        # two ways to make sets
+        # 1. make sets of of cards that are held
+        # 2. make sets off of drawn cards. - in this case, drawing 2, so can't draw 3 of k's
+        three_k_cnt = 0
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+              
+        # 4 cards held, only 1 to draw, so can only make 3 of kinds from held cards
+        max_hand_set = h_cnt.max_by{|item| item[1]} #items are [rank,num_in_hand]
+        sum = 0
+        if held_sets.length < 2 # if 2 pair is held, can be no 3 of kinds
+          left_in_deck_minus_hand = left_in_deck.dup
+          h_cnt.each_pair do |rank,num|
+            left_in_deck_minus_hand.delete(rank)
+          end        
+          h_cnt.each_pair do |rank,num|
+            to_draw = 1
+            next if num != max_hand_set[1]
+                n = left_in_deck[rank]
+                r = 3-num
+                to_draw -= r              
+                sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)              
+          end
+        end
+        three_k_cnt = sum
+        @results[held][:three_of_kind] = three_k_cnt        
         @results[held][:two_pair]
         @results[held][:pair] = 0
         @results[held][:nothing]
@@ -492,6 +756,28 @@ class HandAnalyzer < Qt::MainWindow
         @results[held][result] += 1
         #puts @results
     end    
+  end
+  # draws cards without drawing pairs or 3k's
+  # num - number of cards to draw
+  # card - cards to draw from in hash of {rank:number_left_in_deck}
+  def draw_no_duples num, cards
+    sum = 0
+    if num == 0
+      return 1
+    elsif num == 1
+      ss = 0
+      cards.each_pair do |rank,n|
+        ss += n
+      end
+      return ss
+    else
+      cards.each_pair do |rank, n|
+        c  = cards.dup
+        c.delete(rank)
+        sum += draw_no_duples(num-1,c)*n
+      end
+    end
+    return sum/(num.downto(2).reduce(1){|product,value| product*value})
   end
   def count_straights held, held_cards, discards, discarded_cards, sets, test_straight_flush=false
     straight_cnt = 0
@@ -556,7 +842,8 @@ class HandAnalyzer < Qt::MainWindow
                 # see if a card was thrown away
                 cnt = 1-discarded_cards.count{|card| card.rank==straight_card and card.suit==suit}
                 cnt *= 1-held_cards.count{|card| card.rank==straight_card and card.suit==suit}
-                straight_cnt_this_window *= 1-cnt
+                #straight_cnt_this_window *= 1-cnt
+                straight_cnt_this_window *= cnt
               else
                  straight_cnt_this_window *= 4-discarded_cards.count{|card| card.rank == straight_card}
               end
