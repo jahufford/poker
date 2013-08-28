@@ -500,49 +500,8 @@ class HandAnalyzer < Qt::MainWindow
           end
         end
         @results[held][:straight_flush] = count_straights held, held_cards, discards, discarded_cards, sets, true
-          # four of a kind test
-        four_k_cnt = 0
-        h_cnt = Hash.new
-        d_cnt = Hash.new
-        left_in_deck = Hash.new
-        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
-        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
-        (1..13).each do |rank|
-          left_in_deck[rank] = 4;
-          unless h_cnt[rank].nil?
-            left_in_deck[rank] -= h_cnt[rank]
-          end
-          unless d_cnt[rank].nil?
-            left_in_deck[rank] -= d_cnt[rank]
-          end
-        end
-              
-        #2 cards held,  to draw, make four of a kind from held cards 
-        max_hand_set = h_cnt.max_by{|item| item[1]} #items are [rank,num_in_hand]
-        sum = 0
-        left_in_deck_minus_hand = left_in_deck.dup
-        h_cnt.each_pair do |rank,num|
-          left_in_deck_minus_hand.delete(rank)
-        end        
-        h_cnt.each_pair do |rank,num|
-          to_draw = 2
-          next if num != max_hand_set[1]
-          n = left_in_deck[rank]
-          r = 4-num
-          to_draw -= r              
-          sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)              
-        end
         
-        # # draw the 3 of a kind
-        # if max_hand_set[1] == 1 # can't draw three of kind if you already have a pair, b/c it'd be a FH
-          # left_in_deck_minus_hand.each_pair do |rank, num|
-            # sum += choose(num,3)
-          # end
-        # end
-        
-        
-        four_k_cnt = sum 
-        @results[held][:four_of_kind] = four_k_cnt        
+        @results[held][:four_of_kind]
         @results[held][:full_house]
         # flush test
         puts "#{held.to_s} suit len #{suit_len}"
