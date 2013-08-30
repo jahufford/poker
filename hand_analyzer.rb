@@ -180,6 +180,10 @@ class HandAnalyzer < Qt::MainWindow
   end
   def calculate_odds
     return unless @proposed_hand.find_index{|card|card.nil_card?}.nil?
+    # clear_results
+    # brute_force
+    # update_odds_table    
+    # return
     clear_results
     init_odds_table
     puts "---------------------"
@@ -242,6 +246,7 @@ class HandAnalyzer < Qt::MainWindow
         
         four_k_cnt = sum 
         @results[held][:four_of_kind] = four_k_cnt
+        
         # three of a kind 
         three_k_cnt = 0
         h_cnt = Hash.new
@@ -270,8 +275,9 @@ class HandAnalyzer < Qt::MainWindow
            
         @results[held][:three_of_kind] = three_k_cnt
         
-        # pair test
+        # pair test        
         pair_cnt = 0
+        sum = 0 
         h_cnt = Hash.new
         d_cnt = Hash.new
         left_in_deck = Hash.new
@@ -286,33 +292,14 @@ class HandAnalyzer < Qt::MainWindow
             left_in_deck[rank] -= d_cnt[rank]
           end
         end
-              
-        # #0 cards held, 5 to draw, make pair from held cards 
-        # max_hand_set = h_cnt.max_by{|item| item[1]} #items are [rank,num_in_hand]
-        # sum = 0
-        # left_in_deck_minus_hand = left_in_deck.dup
-        # h_cnt.each_pair do |rank,num|
-          # left_in_deck_minus_hand.delete(rank)
-        # end        
-        # h_cnt.each_pair do |rank,num|
-          # to_draw = 4
-          # next if (num != max_hand_set[1]) or (rank <= 10 and rank >1) # need to handle aces
-          # n = left_in_deck[rank]
-          # r = 2-num
-          # to_draw -= r
-          # if r <= to_draw
-            # sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
-          # end              
-        # end
         
         # draw the pair
-        if max_hand_set[1] == 1
-          left_in_deck_minus_hand.each_pair do |rank, num|
-            next if (rank <= 10 and rank>1)
-            cards = left_in_deck_minus_hand.dup
-            cards.delete(rank)
-            sum += choose(num,2)*draw_no_duples(2,cards)
-          end
+        left_in_deck.each_pair do |rank, num|
+          next if num < 2
+          next if (rank>1 and rank <= 10)
+          cards = left_in_deck.dup
+          cards.delete(rank)
+          sum += choose(num,2)*draw_no_duples(3,cards)
         end
         
         pair_cnt = sum
@@ -349,9 +336,11 @@ class HandAnalyzer < Qt::MainWindow
           n = left_in_deck[rank]
           r = 4-num
           to_draw -= r
-          if r <= to_draw
+         # if r <= to_draw
+          if to_draw >= 0
             sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
-          end              
+          end
+         # end              
         end
         
         # draw the 4 of a kind
@@ -394,9 +383,11 @@ class HandAnalyzer < Qt::MainWindow
           n = left_in_deck[rank]
           r = 3-num
           to_draw -= r
-          if r <= to_draw
+         # if r <= to_draw
+          if to_draw >= 0
             sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
           end
+         # end
         end        
         # draw the 3 of a kind
         if max_hand_set[1] == 1 # can't draw three of kind if you already have a pair, b/c it'd be a FH
@@ -440,20 +431,22 @@ class HandAnalyzer < Qt::MainWindow
           n = left_in_deck[rank]
           r = 2-num
           to_draw -= r
-          if r <= to_draw
+         # if r <= to_draw
+          if to_draw >= 0
             sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
-          end              
+          end
+         # end              
         end
         
         # draw the pair
-        if max_hand_set[1] == 1
+        #if max_hand_set[1] == 1
           left_in_deck_minus_hand.each_pair do |rank, num|
-            next if (rank <= 10 and rank>1)
+            next if ((rank <= 10) and (rank>1))
             cards = left_in_deck_minus_hand.dup
             cards.delete(rank)
             sum += choose(num,2)*draw_no_duples(2,cards)
           end
-        end
+        #end
         
         pair_cnt = sum
         @results[held][:pair] = pair_cnt
@@ -505,9 +498,14 @@ class HandAnalyzer < Qt::MainWindow
           n = left_in_deck[rank]
           r = 4-num
           to_draw -= r
-          if r <= to_draw
+          #if r <= to_draw
+            #b = choose(n,r)
+            #c = draw_no_duples(to_draw, left_in_deck_minus_hand)
+            #sum += b*c
+          if to_draw >= 0
             sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
-          end              
+          end
+          #end              
         end
         
         # # draw the 3 of a kind
@@ -564,9 +562,11 @@ class HandAnalyzer < Qt::MainWindow
           n = left_in_deck[rank]
           r = 3-num
           to_draw -= r
-          if r <= to_draw
+        #  if r <= to_draw
+         if to_draw >= 0
             sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
-          end              
+         end
+         # end              
         end
         
         # draw the 3 of a kind
@@ -576,9 +576,9 @@ class HandAnalyzer < Qt::MainWindow
           end
         end
         
-        
         three_k_cnt = sum
         @results[held][:three_of_kind] = three_k_cnt
+        
         # pair test                
         pair_cnt = 0
         h_cnt = Hash.new
@@ -605,19 +605,21 @@ class HandAnalyzer < Qt::MainWindow
         end        
         h_cnt.each_pair do |rank,num|
           to_draw = 3
-          next if (num != max_hand_set[1]) or (rank <= 10 and rank >1) # need to handle aces
+          next if ((num != max_hand_set[1])) #or ((rank <= 10) and (rank > 1)) )# need to handle aces
           n = left_in_deck[rank]
           r = 2-num
           to_draw -= r
-          if r <= to_draw
+        #  if r <= to_draw
+          if to_draw >= 0
             sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
-          end              
+          end
+         # end              
         end
         
         # draw the pair
-        if max_hand_set[1] == 1 # can't draw three of kind if you already have a pair, b/c it'd be a FH
+        if max_hand_set[1] == 1 # can't draw a pair of kind if you already have a pair, b/c it'd be two pair
           left_in_deck_minus_hand.each_pair do |rank, num|
-            next if (rank <= 10 and rank>1)
+            next if ((rank <= 10) and (rank>1))
             cards = left_in_deck_minus_hand.dup
             cards.delete(rank)
             sum += choose(num,2)*draw_no_duples(1,cards)
@@ -682,9 +684,11 @@ class HandAnalyzer < Qt::MainWindow
           n = left_in_deck[rank]
           r = 4-num
           to_draw -= r
-          if r <= to_draw
+         # if r <= to_draw
+          if to_draw >= 0
             sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
-          end              
+          end
+         # end              
         end
         
         four_k_cnt = sum        
@@ -806,9 +810,11 @@ class HandAnalyzer < Qt::MainWindow
               n = left_in_deck[rank]
               r = 3-num
               to_draw -= r
-              if r <= to_draw
-                sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
-              end          
+             # if r <= to_draw
+             if to_draw >= 0
+               sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
+             end
+             # end          
         end
         
         three_k_cnt = sum
@@ -833,7 +839,7 @@ class HandAnalyzer < Qt::MainWindow
           end
         end        
         @results[held][:straight_flush] = count_straights held, held_cards, discards, discarded_cards, sets, true 
-               # four of a kind
+        # four of a kind
         held_sets = @rules.find_sets(held_cards)
         discard_sets = @rules.find_sets(discarded_cards)
         # two ways to make sets
@@ -868,9 +874,11 @@ class HandAnalyzer < Qt::MainWindow
           n = left_in_deck[rank]
           r = 4-num
           to_draw -= r
-          if r <= to_draw              
+          #if r <= to_draw
+          if to_draw >= 0              
             sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
-          end              
+          end
+          #end              
         end
         
         four_k_cnt = sum        
@@ -926,9 +934,11 @@ class HandAnalyzer < Qt::MainWindow
                 n = left_in_deck[rank]
                 r = 3-num
                 to_draw -= r
-                if r <= to_draw
+              #  if r <= to_draw
+                if to_draw >= 0
                   sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand) unless to_draw < 0
-                end              
+                end
+              #  end              
           end
         end
         three_k_cnt = sum
@@ -1068,46 +1078,46 @@ class HandAnalyzer < Qt::MainWindow
     # held
   # end
   def brute_force
-      # puts "Starting brute force"
-    # @results.each_pair do |hold, cols|
-      # cols[:total] = find_total(5-hold.length)
-    # end
-    # # #puts @cards[0]
-    # # #puts @proposed_hand[0]
-    # #this loops 32 times, for each of every way to play a hand
-    # timer = Qt::Time.new
-#     
-    # cnt = 0
-    # time2 = 0
-    # timer2 = Qt::Time.new
-    # timer.start
-    # @results.each_pair do |held, scored|
-      # #held is the indexes of @proposed_hand that are kept
-    # #  break if cnt == 10000
-     # # cnt += 1      
-      # puts held.to_s      
-      # remaining_cards = @cards.reject{|card| @proposed_hand.find_index(card)} #cards left in the deck #try to replace with include?
-      # #now figure all the ways to draw a hand from the remaining cards
-      # hand = []
-      # (0...47).to_a.combination(5-held.length).each do |comb|        
-        # #hand = [] # this will be the hand to score
-      # #  break if cnt == 10000
-      # #  cnt += 1
-        # hand.clear
-        # held.each do |i| # add cards from @propsed_hand that were kept
-          # hand << @proposed_hand[i]        
-        # end
-        # comb.each{|i| hand << remaining_cards[i]}
-        # timer2.start
-        # result = @rules.score_hand(hand)
-        # time2 += timer2.elapsed
-        # timer2.restart        
-        # scored[result] += 1
-      # end
-    # end    
-    # puts @results.to_s
-    # puts timer.elapsed
-    # puts time2    
+      puts "Starting brute force"
+    @results.each_pair do |hold, cols|
+      cols[:total] = find_total(5-hold.length)
+    end
+    # #puts @cards[0]
+    # #puts @proposed_hand[0]
+    #this loops 32 times, for each of every way to play a hand
+    timer = Qt::Time.new
+    
+    cnt = 0
+    time2 = 0
+    timer2 = Qt::Time.new
+    timer.start
+    @results.each_pair do |held, scored|
+      #held is the indexes of @proposed_hand that are kept
+    #  break if cnt == 10000
+     # cnt += 1      
+      puts held.to_s      
+      remaining_cards = @cards.reject{|card| @proposed_hand.find_index(card)} #cards left in the deck #try to replace with include?
+      #now figure all the ways to draw a hand from the remaining cards
+      hand = []
+      (0...47).to_a.combination(5-held.length).each do |comb|        
+        #hand = [] # this will be the hand to score
+      #  break if cnt == 10000
+      #  cnt += 1
+        hand.clear
+        held.each do |i| # add cards from @propsed_hand that were kept
+          hand << @proposed_hand[i]        
+        end
+        comb.each{|i| hand << remaining_cards[i]}
+        timer2.start
+        result = @rules.score_hand(hand)
+        time2 += timer2.elapsed
+        timer2.restart        
+        scored[result] += 1
+      end
+    end    
+    puts @results.to_s
+    puts timer.elapsed
+    puts time2    
   end
   def deck_card_clicked? pos
     @cards.each_with_index do |card,index|
