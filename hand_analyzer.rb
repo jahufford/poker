@@ -299,6 +299,8 @@ class HandAnalyzer < Qt::MainWindow
           next if (rank>1 and rank <= 10)
           cards = left_in_deck.dup
           cards.delete(rank)
+          a = choose(num,2)
+          b = draw_no_duples(3,cards)
           sum += choose(num,2)*draw_no_duples(3,cards)
         end
         
@@ -605,11 +607,13 @@ class HandAnalyzer < Qt::MainWindow
         end        
         h_cnt.each_pair do |rank,num|
           to_draw = 3
-          next if ((num != max_hand_set[1])) #or ((rank <= 10) and (rank > 1)) )# need to handle aces
+          next if ((num != max_hand_set[1])) or ((rank <= 10) and (rank > 1)) 
           n = left_in_deck[rank]
           r = 2-num
           to_draw -= r
         #  if r <= to_draw
+          b = choose(n,r)
+          c = draw_no_duples(to_draw, left_in_deck_minus_hand)
           if to_draw >= 0
             sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
           end
@@ -775,6 +779,7 @@ class HandAnalyzer < Qt::MainWindow
           # straight_cnt = 0
         # end
         @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
+
         # three of a kind
         held_sets = @rules.find_sets(held_cards)
         discard_sets = @rules.find_sets(discarded_cards)
@@ -820,7 +825,56 @@ class HandAnalyzer < Qt::MainWindow
         three_k_cnt = sum
         @results[held][:three_of_kind] = three_k_cnt
         @results[held][:two_pair]
-        @results[held][:pair] = 0
+        
+        # pair test                
+        pair_cnt = 0
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+              
+        #3 cards held, 2 to draw, make pair from held cards 
+        max_hand_set = h_cnt.max_by{|item| item[1]} #items are [rank,num_in_hand]
+        sum = 0
+        left_in_deck_minus_hand = left_in_deck.dup
+        h_cnt.each_pair do |rank,num|
+          left_in_deck_minus_hand.delete(rank)
+        end        
+        h_cnt.each_pair do |rank,num|
+          to_draw = 2
+          next if ((num != max_hand_set[1])) or ((rank <= 10) and (rank > 1)) 
+          n = left_in_deck[rank]
+          r = 2-num
+          to_draw -= r        
+          b = choose(n,r)
+          c = draw_no_duples(to_draw, left_in_deck_minus_hand)
+          if to_draw >= 0
+            sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
+          end
+        end
+        
+        # draw the pair
+        if max_hand_set[1] == 1 # can't draw a pair if you already have a pair, b/c it'd be two pair
+          left_in_deck_minus_hand.each_pair do |rank, num|
+            next if ((rank <= 10) and (rank > 1)) 
+            cards = left_in_deck_minus_hand.dup
+            cards.delete(rank)
+            sum += choose(num,2)#*draw_no_duples(1,cards)
+          end
+        end
+        
+        pair_cnt = sum
+        @results[held][:pair] = pair_cnt
         @results[held][:nothing]
         @results[held][:nothing] = find_nothing held    
       when [0, 2, 3, 4] , [0, 1, 3, 4] , [0, 1, 2, 4] , [0, 1, 2, 3] , [1, 2, 3, 4]
@@ -944,7 +998,58 @@ class HandAnalyzer < Qt::MainWindow
         three_k_cnt = sum
         @results[held][:three_of_kind] = three_k_cnt        
         @results[held][:two_pair]
-        @results[held][:pair] = 0
+        
+        # pair test
+        sets = @rules.find_sets held_cards
+        unless sets.length == 2
+          pair_cnt = 0
+          h_cnt = Hash.new
+          d_cnt = Hash.new
+          left_in_deck = Hash.new
+          held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+          discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+          (1..13).each do |rank|
+            left_in_deck[rank] = 4;
+            unless h_cnt[rank].nil?
+              left_in_deck[rank] -= h_cnt[rank]
+            end
+            unless d_cnt[rank].nil?
+              left_in_deck[rank] -= d_cnt[rank]
+            end
+          end
+                
+          #4 cards held, 1 to draw, make pair from held cards 
+          max_hand_set = h_cnt.max_by{|item| item[1]} #items are [rank,num_in_hand]
+          sum = 0
+          left_in_deck_minus_hand = left_in_deck.dup
+          h_cnt.each_pair do |rank,num|
+            left_in_deck_minus_hand.delete(rank)
+          end
+          h_cnt.each_pair do |rank,num|
+            to_draw = 1
+            next if ((num != max_hand_set[1])) or ((rank <= 10) and (rank > 1))
+            n = left_in_deck[rank]
+            r = 2-num
+            to_draw -= r        
+            b = choose(n,r)
+            c = draw_no_duples(to_draw, left_in_deck_minus_hand)
+            if to_draw >= 0
+              sum += choose(n,r)*draw_no_duples(to_draw, left_in_deck_minus_hand)
+            end
+          end
+        end
+        # draw the pair
+        # if max_hand_set[1] == 1 # can't draw a pair if you already have a pair, b/c it'd be two pair
+          # left_in_deck_minus_hand.each_pair do |rank, num|
+            # next if ((rank <= 10) and (rank > 1)) 
+            # cards = left_in_deck_minus_hand.dup
+            # cards.delete(rank)
+            # sum += choose(num,2)#*draw_no_duples(1,cards)
+          # end
+        # end
+        
+        pair_cnt = sum
+        @results[held][:pair] = pair_cnt        
         @results[held][:nothing]
         #ra = @results[held].to_a
         # sum all the winning hands        
@@ -962,23 +1067,30 @@ class HandAnalyzer < Qt::MainWindow
   # num - number of cards to draw
   # card - cards to draw from in hash of {rank:number_left_in_deck}
   def draw_no_duples num, cards
-    sum = 0
-    if num <= 0
-      return 1
-    elsif num == 1
-      ss = 0
-      cards.each_pair do |rank,n|
-        ss += n
+    def inside_duple_func num, cards
+      sum = 0
+      if num <= 0
+        return 1
+      elsif num == 1
+        ss = 0
+        cards.each_pair do |rank,n|
+          ss += n
+        end
+        return ss
+      else
+        cards.each_pair do |rank, n|
+          c  = cards.dup
+          c.delete(rank)
+          sum += inside_duple_func(num-1,c)*n
+        end
       end
-      return ss
-    else
-      cards.each_pair do |rank, n|
-        c  = cards.dup
-        c.delete(rank)
-        sum += draw_no_duples(num-1,c)*n
-      end
+      sum 
     end
-    return sum/(num.downto(2).reduce(1){|product,value| product*value})
+    ans = inside_duple_func(num, cards)
+    return ans/(num.downto(2).reduce(1){|product,value| product*value})
+  end
+  def factorial num
+    num.downto(2).reduce(1){|product,value| product*value}
   end
   def count_straights held, held_cards, discards, discarded_cards, sets, test_straight_flush=false
     straight_cnt = 0
