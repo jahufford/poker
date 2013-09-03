@@ -211,20 +211,20 @@ class HandAnalyzer < Qt::MainWindow
     denominator = r.downto(2).reduce(1){|product,value| product*value}
     numerator/denominator
   end
-  #def rf_counter discarded_cards
-    # discard_hash = {:hearts=>[], :diamonds=>[], :spades=>[], :clubs=>[]}
-    # discarded_cards.each do |card|
-     # ddiscard_hash[card.suit] << card.rank
-    # end       
-   # rf_cnt = 4
-    # discard_hash.each_pair do |suit, ranks_array|
-      # cnt = 0
-      # ranks_array.each{|rank| cnt+=1 if [1,10,11,12,13].include?(rank)}
-      # rf_cnt -= 1 if cnt>0
-    # end
-   # rf_cnt
-  #end
-
+  def rf_counter discarded_cards
+    discard_hash = {:hearts=>[], :diamonds=>[], :spades=>[], :clubs=>[]}
+    discarded_cards.each do |card|
+     ddiscard_hash[card.suit] << card.rank
+    end       
+   rf_cnt = 4
+    discard_hash.each_pair do |suit, ranks_array|
+      cnt = 0
+      ranks_array.each{|rank| cnt+=1 if [1,10,11,12,13].include?(rank)}
+      rf_cnt -= 1 if cnt>0
+    end
+   rf_cnt
+  end
+ 
   def count_hands held #held is an array of indices of the held cards in @proposed_hand
     discards = (0..4).to_a.map{|i| i if not held.include?(i)}.compact #indices of discarded cards from @proposed_hand
     discarded_cards = discards.map{|i| @proposed_hand[i] }
@@ -233,11 +233,20 @@ class HandAnalyzer < Qt::MainWindow
     case held
       when []
         sets = @rules.find_sets held_cards
-        #rf_cnt = 0
-        #@results[held][:royal_flush] = rf_cnt
+        discard_hash = {:hearts=>[], :diamonds=>[], :spades=>[], :clubs=>[]}
+        discarded_cards.each do |card|
+          discard_hash[card.suit] << card.rank
+        end       
+        rf_cnt = 4
+        discard_hash.each_pair do |suit, ranks_array|
+          cnt = 0
+          ranks_array.each{|rank| cnt+=1 if [1,10,11,12,13].include?(rank)}
+          rf_cnt -= 1 if cnt>0
+        end
+        @results[held][:royal_flush] = rf_cnt
         # straight flush test
-        #@results[held][:straight_flush] = count_straights held, held_cards, discards, discarded_cards, sets, true
-        # four of a kind test
+        @results[held][:straight_flush] = count_straights(held, held_cards, discards, discarded_cards, sets, true) - @results[held][:royal_flush]
+        # four of a kind test        
         four_k_cnt = 0
         h_cnt = Hash.new
         d_cnt = Hash.new
@@ -265,7 +274,8 @@ class HandAnalyzer < Qt::MainWindow
         
         four_k_cnt = sum 
         @results[held][:four_of_kind] = four_k_cnt
-        
+        straight_cnt = count_straights held, held_cards, discards, discarded_cards, sets, false        
+        @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
         # three of a kind 
         three_k_cnt = 0
         h_cnt = Hash.new
@@ -399,6 +409,9 @@ class HandAnalyzer < Qt::MainWindow
           flush_cnt = choose(n,5-held.length)
           @results[held][:flush] = flush_cnt - @results[held][:royal_flush] - @results[held][:straight_flush] 
         end
+        
+        straight_cnt = count_straights held, held_cards, discards, discarded_cards, sets, false        
+        @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
         
         # three of a kind test
         three_k_cnt = 0
@@ -754,73 +767,7 @@ class HandAnalyzer < Qt::MainWindow
         #straight test
             
         straight_cnt = count_straights held, held_cards, discards, discarded_cards, sets, false 
-        # straight_cnt = 0
-        # if sets.length == 0
-          # #could be possible straights 
-          # max = held_cards.max_by{|card| card.rank}.rank
-          # min = held_cards.min_by{|card| card.rank}.rank
-          # #determine whether to handle an ace as a 1 or a 14
-          # if max > 6
-            # i = held_cards.find_index{|card| card.rank == 1}
-            # if not i.nil?
-              # held_cards[i].rank = 14
-              # i = discarded_cards.find_index{|card| card.rank == 1}
-              # discarded_cards[i].rank = 14 unless i.nil?
-            # end
-          # end
-          # if max-min < 5
-            # parts = 5 - (max-min)
-            # #puts "parts #{parts} #{max} #{min}"
-            # inside = (max-min+1)-held.length # inside draws
-            # outside = discards.length - inside
-            # adjusted_parts = parts
-            # #need to adjust whether or not the run is at the ends of the hand
-            # if min - outside <1
-              # adjusted_parts = parts - (1 - (min-outside))
-            # elsif max + outside > 14
-              # adjusted_parts = parts - (max+outside - 14)
-            # end         
-            # if min - outside > 0            
-              # window_base_rank = min - outside
-            # else
-              # window_base_rank = 1
-            # end
-            # #now make a sliding window containing discards.length
-            # used_parts = 0
-            # straight_cnt = 0
-            # puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_base_rank} | parts #{parts} | adjusted #{adjusted_parts} | inside #{inside} | outside #{outside}"
-            # begin
-              # chosen = 0
-              # until held_cards.find_index{|card| card.rank==window_base_rank}.nil?
-                # window_base_rank += 1
-              # end
-              # straight_cards = [window_base_rank]
-              # while straight_cards.length < discards.length
-                # test = straight_cards.last + 1
-                # until held_cards.find_index{|card| card.rank==test}.nil?
-                  # test += 1
-                # end
-                # straight_cards << test
-              # end
-              # puts straight_cards.to_s
-              # straight_cnt_this_window = 1
-              # straight_cards.each do |straight_card|              
-                # if held_cards.find_index{|card| card.rank == straight_card}.nil?
-                  # straight_cnt_this_window *= 4-discarded_cards.count{|card| card.rank == straight_card}
-                  # dis_cnt = discarded_cards.count{|card| card.rank == window_base_rank}
-                  # puts dis_cnt
-                  # #puts "#{held.to_s} max #{max} | min #{min} | win rank #{window_rank} | parts #{parts} | adjusted #{adjusted_parts} | discnt #{dis_cnt} | inside #{inside} | outside #{outside}"                
-                # end
-              # end
-              # straight_cnt += straight_cnt_this_window
-              # window_base_rank += 1
-              # used_parts += 1
-            # end while used_parts < adjusted_parts
-          # end          
-        # else
-          # # no possible straights
-          # straight_cnt = 0
-        # end
+
         @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
 
         # three of a kind
@@ -1136,6 +1083,48 @@ class HandAnalyzer < Qt::MainWindow
     num.downto(2).reduce(1){|product,value| product*value}
   end
   def count_straights held, held_cards, discards, discarded_cards, sets, test_straight_flush=false
+    if held_cards.length == 0 #need a special case if no cards are held in the hand            
+      if test_straight_flush
+        left_in_deck_suits = Hash.new
+        (1..13).to_a.each do |rank|
+          left_in_deck_suits[rank] = [:hearts,:diamonds,:clubs,:spades]
+        end
+        discarded_cards.each do |card|
+          left_in_deck_suits[card.rank].delete(card.suit)
+        end
+        left_in_deck_suits[14] = left_in_deck_suits[1].dup
+        straight_flush_cnt = 0
+        [:hearts,:diamonds,:clubs,:spades].each do |suit|          
+          1.upto(10) do |i|
+            tmp = 0
+            i.upto(i+4) do |rank|
+              tmp = tmp+1 if left_in_deck_suits[rank].include? suit
+            end        
+            straight_flush_cnt += 1 if tmp == 5
+          end
+        end
+        return straight_flush_cnt
+      end
+      d_cnt = Hash.new
+      left_in_deck = Hash.new
+      discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+      (1..13).each do |rank|
+        left_in_deck[rank] = 4;
+        unless d_cnt[rank].nil?
+          left_in_deck[rank] -= d_cnt[rank]
+        end
+      end      
+      left_in_deck[14] = left_in_deck[1]
+      straight_cnt = 0
+      1.upto(10) do |i|
+        tmp = 1;
+        i.upto(i+4) do |rank|
+          tmp *= left_in_deck[rank]
+        end        
+        straight_cnt += tmp
+      end
+      return straight_cnt
+    end    
     held_cards = held_cards.map { |card|card.dup } # need to copy held_cards so 1 doesn't change to 14    
     straight_cnt = 0
     if test_straight_flush
@@ -1145,9 +1134,9 @@ class HandAnalyzer < Qt::MainWindow
       end
     end
     if sets.length == 0
-      #could be possible straights 
+      #could be possible straights    
       max = held_cards.max_by{|card| card.rank}.rank
-      min = held_cards.min_by{|card| card.rank}.rank
+      min = held_cards.min_by{|card| card.rank}.rank 
       #determine whether to handle an ace as a 1 or a 14
       if max > 6
         i = held_cards.find_index{|card| card.rank == 1}
@@ -1340,7 +1329,7 @@ class HandAnalyzer < Qt::MainWindow
       card_backs << image_map.copy(col*@card_width,5*@card_height,@card_width,@card_height).scaledToWidth(image_width,Qt::SmoothTransformation)
     end
     @card_back = card_backs[3]    
-  end
+  end  
   class Card < Qt::Label
     attr_accessor :rank,:suit,:card_front,:card_back,:state,:width,:height
     def initialize rank,suit,card_front,card_back
