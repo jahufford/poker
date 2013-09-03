@@ -211,6 +211,20 @@ class HandAnalyzer < Qt::MainWindow
     denominator = r.downto(2).reduce(1){|product,value| product*value}
     numerator/denominator
   end
+  #def rf_counter discarded_cards
+    # discard_hash = {:hearts=>[], :diamonds=>[], :spades=>[], :clubs=>[]}
+    # discarded_cards.each do |card|
+     # ddiscard_hash[card.suit] << card.rank
+    # end       
+   # rf_cnt = 4
+    # discard_hash.each_pair do |suit, ranks_array|
+      # cnt = 0
+      # ranks_array.each{|rank| cnt+=1 if [1,10,11,12,13].include?(rank)}
+      # rf_cnt -= 1 if cnt>0
+    # end
+   # rf_cnt
+  #end
+
   def count_hands held #held is an array of indices of the held cards in @proposed_hand
     discards = (0..4).to_a.map{|i| i if not held.include?(i)}.compact #indices of discarded cards from @proposed_hand
     discarded_cards = discards.map{|i| @proposed_hand[i] }
@@ -218,6 +232,11 @@ class HandAnalyzer < Qt::MainWindow
     sorted_held = held_cards.sort{|a,b,|a.rank <=> b.rank}
     case held
       when []
+        sets = @rules.find_sets held_cards
+        #rf_cnt = 0
+        #@results[held][:royal_flush] = rf_cnt
+        # straight flush test
+        #@results[held][:straight_flush] = count_straights held, held_cards, discards, discarded_cards, sets, true
         # four of a kind test
         four_k_cnt = 0
         h_cnt = Hash.new
@@ -308,6 +327,22 @@ class HandAnalyzer < Qt::MainWindow
         @results[held][:pair] = pair_cnt
         @results[held][:nothing] = find_nothing held
       when [0],[1],[2],[3],[4]
+        sets = @rules.find_sets held_cards
+        suit = held_cards[0].suit
+        suit_len = held_cards.count{|card| card.suit == suit}
+        # royal flush test
+        if suit_len != 2
+          @results[held][:royal_flush] = 0
+        else
+          needed = [1,10,11,12,13]
+          held_count = held_cards.count{|card| needed.include? card.rank}
+          discard_count = discarded_cards.count{|card| (needed.include? card.rank) && (card.suit == suit)}
+          if held_count == held.length and discard_count == 0
+            @results[held][:royal_flush] = 1
+          end
+        end
+        # straight flush test
+        @results[held][:straight_flush] = count_straights held, held_cards, discards, discarded_cards, sets, true
         # four of a kind test
         four_k_cnt = 0
         h_cnt = Hash.new
@@ -354,6 +389,16 @@ class HandAnalyzer < Qt::MainWindow
         
         four_k_cnt = sum 
         @results[held][:four_of_kind] = four_k_cnt
+        
+        # flush test       
+        if suit_len != 1 # doesn't do anything here, just follows pattern for other holds
+          @results[held][:flush]=0
+        else          
+          discard_suit_cnt = discarded_cards.count{|card| card.suit == suit}
+          n = 13 - held.length-discard_suit_cnt
+          flush_cnt = choose(n,5-held.length)
+          @results[held][:flush] = flush_cnt - @results[held][:royal_flush] - @results[held][:straight_flush] 
+        end
         
         # three of a kind test
         three_k_cnt = 0
@@ -521,8 +566,7 @@ class HandAnalyzer < Qt::MainWindow
         four_k_cnt = sum 
         @results[held][:four_of_kind] = four_k_cnt
         @results[held][:full_house]
-        # flush test
-        puts "#{held.to_s} suit len #{suit_len}"
+        # flush test       
         if suit_len != 2
           @results[held][:flush]=0
         else          
@@ -532,6 +576,7 @@ class HandAnalyzer < Qt::MainWindow
           @results[held][:flush] = flush_cnt - @results[held][:royal_flush] - @results[held][:straight_flush] 
         end
         
+        # straight test
         straight_cnt = count_straights held, held_cards, discards, discarded_cards, sets, false        
         @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
         
@@ -637,9 +682,7 @@ class HandAnalyzer < Qt::MainWindow
            [0, 3, 4],[1, 2, 3],[1, 2, 4],[1, 3, 4], [2, 3, 4]
         sets = @rules.find_sets held_cards      
         suit = held_cards[0].suit
-        a = []
-        held_cards.each {|card| a << card.suit}
-        puts a.to_s
+        #held_cards.each {|card| a << card.suit}        
         suit_len = held_cards.count{|card| card.suit == suit}
         #royal flush test
         if suit_len != 3
@@ -1093,6 +1136,7 @@ class HandAnalyzer < Qt::MainWindow
     num.downto(2).reduce(1){|product,value| product*value}
   end
   def count_straights held, held_cards, discards, discarded_cards, sets, test_straight_flush=false
+    held_cards = held_cards.map { |card|card.dup } # need to copy held_cards so 1 doesn't change to 14    
     straight_cnt = 0
     if test_straight_flush
       suit = held_cards[0].suit
