@@ -274,6 +274,13 @@ class HandAnalyzer < Qt::MainWindow
         
         four_k_cnt = sum 
         @results[held][:four_of_kind] = four_k_cnt
+        #flush test        
+        flush_cnt = 0
+        [:hearts,:diamonds,:clubs,:spades].each do |suit|
+          suit_cnt = discarded_cards.count{|card|card.suit==suit}
+          flush_cnt += choose(13-suit_cnt, 5)
+        end
+        @results[held][:flush] = flush_cnt - @results[held][:straight_flush] - @results[held][:royal_flush]
         straight_cnt = count_straights held, held_cards, discards, discarded_cards, sets, false        
         @results[held][:straight] = straight_cnt - @results[held][:royal_flush] - @results[held][:straight_flush]
         # three of a kind 
@@ -753,6 +760,8 @@ class HandAnalyzer < Qt::MainWindow
         
         four_k_cnt = sum        
         @results[held][:four_of_kind] = four_k_cnt
+        # full house test
+        
         @results[held][:full_house]
         # flush test
         puts "#{held.to_s} suit len #{suit_len}"
