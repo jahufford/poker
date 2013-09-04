@@ -207,6 +207,10 @@ class HandAnalyzer < Qt::MainWindow
     update_odds_table
   end
   def choose n, r
+    if (n<0) or (r<0)
+      puts "whoa there, n or r is negative (#{n},#{r})"
+      return 0
+    end
     numerator = n.downto(n-r+1).reduce(1){|product,value| product*value}
     denominator = r.downto(2).reduce(1){|product,value| product*value}
     numerator/denominator
@@ -274,6 +278,87 @@ class HandAnalyzer < Qt::MainWindow
         
         four_k_cnt = sum 
         @results[held][:four_of_kind] = four_k_cnt
+        
+        # full house test
+        fh_cnt = 0
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+        left_in_deck.each_pair do |rank, num|
+          cards = left_in_deck.dup
+          cards.delete rank
+          three_set_cnt = choose(num, 3);
+          sum = 0
+          cards.each_pair do |rank,num|
+            sum += choose(num,2)
+          end
+          fh_cnt += three_set_cnt*sum
+        end
+        # ways to make full house
+        # 1. make off of sets held in hand
+        # fh_cnt = 0
+        # fh_sets = @rules.find_sets(held_cards,true)
+        # biggest_set = (fh_sets.max_by{|set| set[0]})[0]
+        # if (fh_sets.length <= 2) and (biggest_set<4) # can't have full house if you've held 3 different ranks
+                                                     # # and can't have full house if you've have 4 of a kind
+          # left_in_deck_minus_hand = left_in_deck.dup
+          # h_cnt.each_pair do |rank,num|
+            # left_in_deck_minus_hand.delete(rank)
+          # end
+          # fh_sets.each do |set| # set[0] is number of cards,set[1] is the rank of the card            
+            # three_set_cnt = choose(left_in_deck[set[1]], 3-set[0]) # make the 3 of a kind
+            # # now make the pair
+            # left_in_hand = fh_sets.dup
+            # left_in_hand.delete set # if held two different cards, can only make fh with those cards
+            # if left_in_hand.length != 0 #draw one or zero more cards
+              # two_set_cnt = choose(left_in_deck[left_in_hand[0][1]], 2-left_in_hand[0][0]) #finish the pair
+            # else
+              # #draw a pair              
+              # sum = 0
+              # left_in_deck_minus_hand.each_pair do |rank,num|
+                # sum += choose(num,2)
+              # end
+              # two_set_cnt = sum
+            # end
+            # fh_cnt += three_set_cnt*two_set_cnt
+          # end
+          # if (fh_sets.length == 1) and (fh_sets[0][0] == 2)
+            # # if only one set is held, eg two queen's or three sixes, the above only found full houses
+            # # by making the three set with the queen's or sixes, now need to find full house
+            # # with a two set of the queens or sixes            
+            # sum = 0
+            # left_in_deck_minus_hand.each_pair do |rank, num|
+              # sum += choose(num,5-fh_sets[0][0])
+            # end
+            # fh_cnt += sum            
+          # end
+          # if (fh_sets.length == 1) and (fh_sets[0][0] == 1)
+            # # if only one set is held, eg two queen's or three sixes, the above only found full houses
+            # # by making the three set with the queen's or sixes, now need to find full house
+            # # with a two set of the queens or sixes
+            # two_set_cnt = left_in_deck[fh_sets[0][1]] # actually choose(left_in_deck[fh_sets[0][1]],1)
+            # sum = 0            
+            # left_in_deck_minus_hand.each_pair do |rank, num|
+              # sum += choose(num,3)
+            # end
+            # x = sum*two_set_cnt
+            # fh_cnt += x            
+          # end
+        # end                
+
+        @results[held][:full_house] = fh_cnt
+        
         #flush test        
         flush_cnt = 0
         [:hearts,:diamonds,:clubs,:spades].each do |suit|
@@ -407,7 +492,77 @@ class HandAnalyzer < Qt::MainWindow
         four_k_cnt = sum 
         @results[held][:four_of_kind] = four_k_cnt
         
-        # flush test       
+        # full house test
+
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+        # ways to make full house
+        # 1. make off of sets held in hand
+        fh_cnt = 0
+        fh_sets = @rules.find_sets(held_cards,true)
+        biggest_set = (fh_sets.max_by{|set| set[0]})[0]
+        if (fh_sets.length <= 2) and (biggest_set<4) # can't have full house if you've held 3 different ranks
+                                                     # and can't have full house if you've have 4 of a kind
+          left_in_deck_minus_hand = left_in_deck.dup
+          h_cnt.each_pair do |rank,num|
+            left_in_deck_minus_hand.delete(rank)
+          end
+          fh_sets.each do |set| # set[0] is number of cards,set[1] is the rank of the card            
+            three_set_cnt = choose(left_in_deck[set[1]], 3-set[0]) # make the 3 of a kind
+            # now make the pair
+            left_in_hand = fh_sets.dup
+            left_in_hand.delete set # if held two different cards, can only make fh with those cards
+            if left_in_hand.length != 0 #draw one or zero more cards
+              two_set_cnt = choose(left_in_deck[left_in_hand[0][1]], 2-left_in_hand[0][0]) #finish the pair
+            else
+              #draw a pair              
+              sum = 0
+              left_in_deck_minus_hand.each_pair do |rank,num|
+                sum += choose(num,2)
+              end
+              two_set_cnt = sum
+            end
+            fh_cnt += three_set_cnt*two_set_cnt
+          end
+          if (fh_sets.length == 1) and (fh_sets[0][0] == 2)
+            # if only one set is held, eg two queen's or three sixes, the above only found full houses
+            # by making the three set with the queen's or sixes, now need to find full house
+            # with a two set of the queens or sixes            
+            sum = 0
+            left_in_deck_minus_hand.each_pair do |rank, num|
+              sum += choose(num,5-fh_sets[0][0])
+            end
+            fh_cnt += sum            
+          end
+          if (fh_sets.length == 1) and (fh_sets[0][0] == 1)
+            # if only one set is held, eg two queen's or three sixes, the above only found full houses
+            # by making the three set with the queen's or sixes, now need to find full house
+            # with a two set of the queens or sixes
+            two_set_cnt = left_in_deck[fh_sets[0][1]] # actually choose(left_in_deck[fh_sets[0][1]],1)
+            sum = 0            
+            left_in_deck_minus_hand.each_pair do |rank, num|
+              sum += choose(num,3)
+            end
+            x = sum*two_set_cnt
+            fh_cnt += x            
+          end
+        end                
+
+        @results[held][:full_house] = fh_cnt
+
+        # flush test
         if suit_len != 1 # doesn't do anything here, just follows pattern for other holds
           @results[held][:flush]=0
         else          
@@ -581,11 +736,68 @@ class HandAnalyzer < Qt::MainWindow
             # sum += choose(num,3)
           # end
         # end
-        
-        
+                
         four_k_cnt = sum 
         @results[held][:four_of_kind] = four_k_cnt
-        @results[held][:full_house]
+        
+        # full house test
+
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+        # ways to make full house
+        # 1. make off of sets held in hand
+        fh_cnt = 0
+        fh_sets = @rules.find_sets(held_cards,true)
+        biggest_set = (fh_sets.max_by{|set| set[0]})[0]
+        if (fh_sets.length <= 2) and (biggest_set<4) # can't have full house if you've held 3 different ranks
+                                                     # and can't have full house if you've have 4 of a kind
+          left_in_deck_minus_hand = left_in_deck.dup
+          h_cnt.each_pair do |rank,num|
+            left_in_deck_minus_hand.delete(rank)
+          end
+          fh_sets.each do |set| # set[0] is number of cards,set[1] is the rank of the card            
+            three_set_cnt = choose(left_in_deck[set[1]], 3-set[0]) # make the 3 of a kind
+            # now make the pair
+            left_in_hand = fh_sets.dup
+            left_in_hand.delete set # if held two different cards, can only make fh with those cards
+            if left_in_hand.length != 0 #draw one or zero more cards
+              two_set_cnt = choose(left_in_deck[left_in_hand[0][1]], 2-left_in_hand[0][0]) #finish the pair
+            else
+              #draw a pair              
+              sum = 0
+              left_in_deck_minus_hand.each_pair do |rank,num|
+                sum += choose(num,2)
+              end
+              two_set_cnt = sum
+            end
+            fh_cnt += three_set_cnt*two_set_cnt
+          end
+          if (fh_sets.length == 1) and (fh_sets[0][0] == 2)
+            # if only one set is held, eg two queen's or three sixes, the above only found full houses
+            # by making the three set with the queen's or sixes, now need to find full house
+            # with a two set of the queens or sixes            
+            sum = 0
+            left_in_deck_minus_hand.each_pair do |rank, num|
+              sum += choose(num,5-fh_sets[0][0])
+            end
+            fh_cnt += sum            
+          end
+        end                
+
+        @results[held][:full_house] = fh_cnt
+
         # flush test       
         if suit_len != 2
           @results[held][:flush]=0
@@ -761,8 +973,61 @@ class HandAnalyzer < Qt::MainWindow
         four_k_cnt = sum        
         @results[held][:four_of_kind] = four_k_cnt
         # full house test
+
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+        # ways to make full house
+        # 1. make off of sets held in hand
+        fh_cnt = 0
+        fh_sets = @rules.find_sets(held_cards,true)
+        if fh_sets.length <= 2 # can't have full house if you've held 3 different ranks
+          left_in_deck_minus_hand = left_in_deck.dup
+          h_cnt.each_pair do |rank,num|
+            left_in_deck_minus_hand.delete(rank)
+          end
+          fh_sets.each do |set| # set[0] is number of cards,set[1] is the rank of the card            
+            three_set_cnt = choose(left_in_deck[set[1]], 3-set[0]) # make the 3 of a kind
+            # now make the pair
+            left_in_hand = fh_sets.dup
+            left_in_hand.delete set # if held two different cards, can only make fh with those cards
+            if left_in_hand.length != 0 #draw one or zero more cards
+              two_set_cnt = choose(left_in_deck[left_in_hand[0][1]], 2-left_in_hand[0][0]) #finish the pair
+            else
+              #draw a pair              
+              sum = 0
+              left_in_deck_minus_hand.each_pair do |rank,num|
+                sum += choose(num,2)
+              end
+              two_set_cnt = sum
+            end
+            fh_cnt += three_set_cnt*two_set_cnt
+          end
+          if (fh_sets.length == 1) and (fh_sets[0][0] == 2)
+            # if only one set is held, eg two queen's or three sixes, the above only found full houses
+            # by making the three set with the queen's or sixes, now need to find full house
+            # with a two set of the queens or sixes            
+            sum = 0
+            left_in_deck_minus_hand.each_pair do |rank, num|
+              sum += choose(num,5-fh_sets[0][0])
+            end
+            fh_cnt += sum            
+          end
+        end                
+
+        @results[held][:full_house] = fh_cnt
         
-        @results[held][:full_house]
         # flush test
         puts "#{held.to_s} suit len #{suit_len}"
         if suit_len != 3
@@ -936,7 +1201,65 @@ class HandAnalyzer < Qt::MainWindow
         
         four_k_cnt = sum        
         @results[held][:four_of_kind] = four_k_cnt
-        @results[held][:full_house]
+        
+        # full house test
+
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+        # ways to make full house
+        # 1. make off of sets held in hand
+        fh_cnt = 0
+        fh_sets = @rules.find_sets(held_cards,true)
+        biggest_set = (fh_sets.max_by{|set| set[0]})[0]
+        if (fh_sets.length <= 2) and (biggest_set<4) # can't have full house if you've held 3 different ranks
+                                                     # and can't have full house if you've have 4 of a kind
+          left_in_deck_minus_hand = left_in_deck.dup
+          h_cnt.each_pair do |rank,num|
+            left_in_deck_minus_hand.delete(rank)
+          end
+          fh_sets.each do |set| # set[0] is number of cards,set[1] is the rank of the card            
+            three_set_cnt = choose(left_in_deck[set[1]], 3-set[0]) # make the 3 of a kind
+            # now make the pair
+            left_in_hand = fh_sets.dup
+            left_in_hand.delete set # if held two different cards, can only make fh with those cards
+            if left_in_hand.length != 0 #draw one or zero more cards
+              two_set_cnt = choose(left_in_deck[left_in_hand[0][1]], 2-left_in_hand[0][0]) #finish the pair
+            else
+              #draw a pair              
+              sum = 0
+              left_in_deck_minus_hand.each_pair do |rank,num|
+                sum += choose(num,2)
+              end
+              two_set_cnt = sum
+            end
+            fh_cnt += three_set_cnt*two_set_cnt
+          end
+          if (fh_sets.length == 1) and (fh_sets[0][0] == 2)
+            # if only one set is held, eg two queen's or three sixes, the above only found full houses
+            # by making the three set with the queen's or sixes, now need to find full house
+            # with a two set of the queens or sixes            
+            sum = 0
+            left_in_deck_minus_hand.each_pair do |rank, num|
+              sum += choose(num,5-fh_sets[0][0])
+            end
+            fh_cnt += sum            
+          end
+        end                
+
+        @results[held][:full_house] = fh_cnt
+        
         # flush test
         if suit_len != 4
           @results[held][:flush]=0

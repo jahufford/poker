@@ -102,7 +102,7 @@ class JacksOrBetterScoring
         end
       end
     end       
-    def find_sets cards
+    def find_sets cards, set_of_one=false
       #this function finds the number of multiple of a card ranks in a hand
       # ie, if the hand has 1,1,5,5,7 the return is [[2,1],[2,5]]
       #     if the hand has 5,5,7,7,7 the return is [[2,5],[3,7]]
@@ -115,16 +115,17 @@ class JacksOrBetterScoring
       #puts s      
       sets = []
       cnt = 1
+      set_size = (set_of_one)? 0 : 1
       last = sorted.reduce do |a,b|
         if a.rank==b.rank
           cnt += 1
-        else        
-          sets << [cnt,a.rank] if cnt>1
+        else          
+          sets << [cnt,a.rank] if cnt>set_size
           cnt = 1
         end
         b
       end
-      sets << [cnt,last.rank] if cnt>1    
+      sets << [cnt,last.rank] if cnt>set_size
       sets.sort!{|a,b| a[0]<=>b[0]}
      # puts sets
      # puts "---"
