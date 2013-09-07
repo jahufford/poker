@@ -1,4 +1,22 @@
 #FIX guarantee order of table
+class MyLineEdit < Qt::LineEdit
+  slots 'edit_func()'
+  signals 'multiplier_changed()'
+  attr_accessor :hand, :multiplier
+  def initialize hand, multiplier
+    super multiplier.to_s
+    @hand = hand
+    @multiplier = multiplier
+    connect(self, SIGNAL('editingFinished()'), self, SLOT('edit_func()'))    
+  end
+  def edit_func    
+    if self.text.to_i != @multiplier
+      @multiplier = self.text.to_i
+      emit multiplier_changed()
+    end
+  end
+end
+
 class HandAnalyzer < Qt::MainWindow
   slots 'calculate_odds()'
   def initialize rules, paytable, hand=nil
@@ -7,18 +25,18 @@ class HandAnalyzer < Qt::MainWindow
     @rules = rules
     @paytable = paytable
     multipliers = @paytable.multipliers.to_a
-    @paytable_multipliers = @paytable.multipliers
+    @paytable_multipliers = Hash.new
     multipliers.sort! {|a,b| b[1]<=>a[1] }
-    paytable_grid = Qt::GridLayout.new
+    paytable_grid = Qt::GridLayout.new    
     multipliers.each_with_index do |elem,ind|
       label = Qt::Label.new elem[0].to_s
       label.setFixedWidth 100
-      edit = Qt::LineEdit.new elem[1].to_s
-      edit.setFixedWidth 50
-      #connect(edit, SIGNAL('editingFinished()'),self,SLOT('calculate_odds()'))
-      edit.connect(SIGNAL :editingFinished) do
-        puts "why"
-        #calculate_odds()
+      #edit = Qt::LineEdit.new elem[1].to_s
+      edit = MyLineEdit.new elem[0], elem[1]
+      @paytable_multipliers[elem[0]] = edit
+      edit.setFixedWidth 50      
+      edit.connect(SIGNAL :multiplier_changed) do
+        calculate_odds()        
       end
       paytable_grid.addWidget label, ind, 0
       paytable_grid.addWidget edit, ind, 1
@@ -202,9 +220,18 @@ class HandAnalyzer < Qt::MainWindow
       @results[item][:hand] = str
       @results[item][:total] = find_total str.count('_') #total number of possible hands with that hold      
     end
-    @results.each_key do |key|
-      count_hands key
-    end  
+    @results.each_pair do |held, values|
+      count_hands held
+      sum = 0
+      values.each_pair do |hand, count|
+        next if [:return,:hand,:total,:nothing].include? hand # skips the non-hands
+   #     puts "#{@paytable_multipliers[hand].multiplier} #{count}"
+        sum += @paytable_multipliers[hand].multiplier * count
+      end
+      puts "#{sum} #{values[:total]} #{sum/values[:total]}"
+      puts "#{sum.class} #{values[:total].class}"
+      values[:return] = sum/values[:total].to_f
+    end    
     update_odds_table
   end
   def choose n, r
