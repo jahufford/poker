@@ -7,7 +7,8 @@ class HandAnalyzer < Qt::MainWindow
     @rules = rules
     @paytable = paytable
     multipliers = @paytable.multipliers.to_a
-    multipliers.sort! {|a,b| b[1]<=>a[1] }    
+    @paytable_multipliers = @paytable.multipliers
+    multipliers.sort! {|a,b| b[1]<=>a[1] }
     paytable_grid = Qt::GridLayout.new
     multipliers.each_with_index do |elem,ind|
       label = Qt::Label.new elem[0].to_s
@@ -15,8 +16,8 @@ class HandAnalyzer < Qt::MainWindow
       edit = Qt::LineEdit.new elem[1].to_s
       edit.setFixedWidth 50
       #connect(edit, SIGNAL('editingFinished()'),self,SLOT('calculate_odds()'))
-      edit.connect(SIGNAL :editingFinished) do 
-        #puts "why"
+      edit.connect(SIGNAL :editingFinished) do
+        puts "why"
         #calculate_odds()
       end
       paytable_grid.addWidget label, ind, 0
