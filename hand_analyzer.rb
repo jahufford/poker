@@ -690,19 +690,17 @@ class HandAnalyzer < Qt::MainWindow
               sum = 0
               left_in_deck_minus_hand.each_pair do |rank,num|                
                 whats_left = left_in_deck_minus_hand.dup
-                whats_left.delete rank
-                pair = choose(num,2)
-                sum = 0
+                whats_left.delete rank                
+                pair = choose(num,2)                                
                 whats_left.each_pair do |rank, num|
                   sum += pair*choose(num,1)
-                  #sum += choose(num,1)
                 end
-                
               end
               second_pair_cnt = sum
-            end
+            end            
             two_pair_cnt += first_pair_cnt*second_pair_cnt
           end
+          x = 0
           if (biggest_set == 1) and (5-held.length == 4) # need to draw the 2 pair outright
             #sum = 0
             left_in_deck_minus_hand.each_pair do |rank, num|
@@ -713,9 +711,11 @@ class HandAnalyzer < Qt::MainWindow
               cards.each_pair do |rank,num|
                 second_sum += choose(num,2)
               end
-              two_pair_cnt += first_two*second_sum
-            end            
+              x+= first_two*second_sum/2
+              two_pair_cnt += first_two*second_sum/2 # gotta divide by 2 since order of th two pair doesn't matter
+            end
           end
+          puts x
           # if (two_pair_sets.length == 1) and (two_pair_sets[0][0] == 2)
             # # if only one set is held, eg two queen's or three sixes, the above only found full houses
             # # by making the three set with the queen's or sixes, now need to find full house
