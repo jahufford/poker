@@ -222,14 +222,12 @@ class HandAnalyzer < Qt::MainWindow
     end
     @results.each_pair do |held, values|
       count_hands held
+      # now calculate the return
       sum = 0
       values.each_pair do |hand, count|
-        next if [:return,:hand,:total,:nothing].include? hand # skips the non-hands
-   #     puts "#{@paytable_multipliers[hand].multiplier} #{count}"
+        next if [:return,:hand,:total,:nothing].include? hand # skips the non-hands   
         sum += @paytable_multipliers[hand].multiplier * count
-      end
-      puts "#{sum} #{values[:total]} #{sum/values[:total]}"
-      puts "#{sum.class} #{values[:total].class}"
+      end     
       values[:return] = sum/values[:total].to_f
     end    
     update_odds_table
@@ -650,6 +648,99 @@ class HandAnalyzer < Qt::MainWindow
          
         three_k_cnt = sum
         @results[held][:three_of_kind] = three_k_cnt
+        
+        # two pair test
+
+        h_cnt = Hash.new
+        d_cnt = Hash.new
+        left_in_deck = Hash.new
+        held_cards.each{|card| h_cnt[card.rank] = h_cnt[card.rank].nil? ? 1 : h_cnt[card.rank]+1 }
+        discarded_cards.each{|card| d_cnt[card.rank] = d_cnt[card.rank].nil? ? 1 : d_cnt[card.rank]+1 }
+        (1..13).each do |rank|
+          left_in_deck[rank] = 4;
+          unless h_cnt[rank].nil?
+            left_in_deck[rank] -= h_cnt[rank]
+          end
+          unless d_cnt[rank].nil?
+            left_in_deck[rank] -= d_cnt[rank]
+          end
+        end
+        # ways to make two_pair
+        # 1. make off of sets held in hand
+        two_pair_cnt = 0
+        two_pair_sets = @rules.find_sets(held_cards,true) #the true gives me sets of length one
+        biggest_set = (two_pair_sets.max_by{|set| set[0]})[0]
+        if (two_pair_sets.length <= 4) and (biggest_set<3) # can't have two pair if you've held 4 different ranks
+                                                     # and can't have two pair if you've kept 3 of a kind
+          left_in_deck_minus_hand = left_in_deck.dup
+          h_cnt.each_pair do |rank,num|
+            left_in_deck_minus_hand.delete(rank)
+          end
+          picked = 0
+          two_pair_sets.each do |set| # set[0] is number of cards, set[1] is the rank of the card
+            picked += 2-set[0]            
+            first_pair_cnt = choose(left_in_deck[set[1]], 2-set[0]) # make the first pair
+            # now make the 2nd pair
+            left_in_hand = two_pair_sets.dup
+            left_in_hand.delete set # if held two different cards, can only make 2pair with those cards
+            if left_in_hand.length != 0 #draw one or zero more cards
+              second_pair_cnt = choose(left_in_deck[left_in_hand[0][1]], 2-left_in_hand[0][0]) #finish the pair
+            else
+              #draw a pair
+              sum = 0
+              left_in_deck_minus_hand.each_pair do |rank,num|                
+                whats_left = left_in_deck_minus_hand.dup
+                whats_left.delete rank
+                pair = choose(num,2)
+                sum = 0
+                whats_left.each_pair do |rank, num|
+                  sum += pair*choose(num,1)
+                  #sum += choose(num,1)
+                end
+                
+              end
+              second_pair_cnt = sum
+            end
+            two_pair_cnt += first_pair_cnt*second_pair_cnt
+          end
+          if (biggest_set == 1) and (5-held.length == 4) # need to draw the 2 pair outright
+            #sum = 0
+            left_in_deck_minus_hand.each_pair do |rank, num|
+              first_two = choose(num,2)
+              cards = left_in_deck_minus_hand.dup
+              cards.delete rank
+              second_sum = 0
+              cards.each_pair do |rank,num|
+                second_sum += choose(num,2)
+              end
+              two_pair_cnt += first_two*second_sum
+            end            
+          end
+          # if (two_pair_sets.length == 1) and (two_pair_sets[0][0] == 2)
+            # # if only one set is held, eg two queen's or three sixes, the above only found full houses
+            # # by making the three set with the queen's or sixes, now need to find full house
+            # # with a two set of the queens or sixes            
+            # sum = 0
+            # left_in_deck_minus_hand.each_pair do |rank, num|
+              # sum += choose(num,5-fh_sets[0][0])
+            # end
+            # two_pair_cnt += sum
+          # end
+          # if (two_pair_sets.length == 1) and (two_pair_sets[0][0] == 1)
+            # # if only one set is held, eg two queen's or three sixes, the above only found full houses
+            # # by making the three set with the queen's or sixes, now need to find full house
+            # # with a two set of the queens or sixes
+            # two_set_cnt = left_in_deck[two_pair_sets[0][1]] # actually choose(left_in_deck[fh_sets[0][1]],1)
+            # sum = 0            
+            # left_in_deck_minus_hand.each_pair do |rank, num|
+              # sum += choose(num,3)
+            # end
+            # x = sum*two_set_cnt
+            # two_pair_cnt += x
+          # end
+        end                
+
+        @results[held][:two_pair] = two_pair_cnt
         
         # pair test                
         pair_cnt = 0
