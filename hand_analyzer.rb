@@ -99,8 +99,7 @@ class HandAnalyzer < Qt::MainWindow
     end
     widget = Qt::Widget.new
     widget.setLayout vert_layout
-    setCentralWidget widget
-    set_from_passed_in_hand hand
+    setCentralWidget widget   
     
     #create a big hash in a hash. The first hash will have all the combination of ways you can hold a hand (30), and 
     # it's value will be another hash that has the hand types (royal flush, pair, etc) as the key with the value being
@@ -119,8 +118,9 @@ class HandAnalyzer < Qt::MainWindow
       @results[combo] = hand_hash.dup
     end
     #puts @results.to_s
-   # showMaximized()
+   # showMaximized()   
     setMinimumWidth(1250)
+    set_from_passed_in_hand hand
   end
   def clear_results    
     @results.each_pair do |key, value|

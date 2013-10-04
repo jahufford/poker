@@ -138,7 +138,7 @@ class MainWindow < Qt::MainWindow
     # @gameboard = Gameboard.new( DeucesWildScoring,DeucesWildPayTable)
     # setCentralWidget @gameboard.view    
     # resize(@gameboard.view.width+100, @gameboard.view.height+100)
-    @options = {:discard_style=>:move}
+    @options = {:discard_style=>:flip}
     resize 800,600
   end
   def show_main_menu
