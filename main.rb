@@ -12,6 +12,28 @@
   # end  
 # end
 
+
+# def comb set_size, current, nums
+  # these_nums = nums.dup  
+  # #nums.each do |num|
+  # for i in (0..(nums.length - set_size))
+    # num = nums[i]
+    # cur = current.dup
+    # cur << num
+    # cur.flatten!
+    # these_nums.delete num
+    # if set_size > 1
+      # comb set_size-1, cur, these_nums 
+    # else
+      # puts cur.to_s
+    # end   
+  # end
+# end
+# 
+# x = comb 3, [], [1,2,3,4,5]
+# print x
+# exit
+
 require 'Qt'
 require './gameboard.rb'
 require './rules.rb'

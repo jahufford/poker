@@ -108,6 +108,7 @@ class JacksOrBetterScoring
       #     if the hand has 5,5,7,7,7 the return is [[2,5],[3,7]]
       #     if the hand has 4,4,4,4,4 the return is [[5,4]]
       #     if the hand has 2,3,8,8,9 the return is [[2,8]]
+      return [] if cards.empty?
       sorted = cards.sort { |card1,card2| card1.rank<=>card2.rank}
       s = "["
       sorted.each{|card| s += "[#{card.rank},#{card.suit}]"}
