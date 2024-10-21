@@ -109,6 +109,7 @@ class HandAnalyzer < Qt::MainWindow
     # @results[[1,3]] is a hash with with :royal_flush=>number_of_royal_flushes possible
     #                                     :pair=> number_of_pairs possible and so on
     # @results[[1,3]][:royal_flush] = number of royal flushes possible    
+    # @results[[2,4,5]][:full_house] = number of full houses
     #hand_syms = [:return, :hand, :total, :nothing, :royal_flush, :straight_flush, :four_of_kind,:full_house,:flush,:straight,:three_of_kind,:two_pair,:pair]
     hand_syms = [:return, :hand, :total, :nothing, :pair, :two_pair, :three_of_kind, :straight, :flush, :full_house, :four_of_kind, :straight_flush, :royal_flush]
     hand_hash = Hash.new

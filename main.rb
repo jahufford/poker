@@ -34,6 +34,7 @@
 # print x
 # exit
 
+require 'thread'
 require 'Qt'
 require './gameboard.rb'
 require './rules.rb'
